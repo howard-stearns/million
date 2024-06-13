@@ -1,0 +1,25 @@
+{
+  "name": "million",
+  "version": "0.0.1",
+  "description": "Run a computation using a million nodes.",
+  "main": "node-app.mjs",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/howard-stearns/million.git"
+  },
+  "keywords": [
+    "depin",
+    "croquet",
+    "multisynq",
+    "distributed"
+  ],
+  "author": "howard-stearns",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/howard-stearns/million/issues"
+  },
+  "homepage": "https://github.com/howard-stearns/million#readme",
+  "dependencies": {
+    "@kilroy-code/croquet-in-memory": "^0.0.5"
+  }
+}
