@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Run a computation using a million nodes.",
   "main": "node-app.mjs",
+  "scripts": {
+    "test": "node node-app.mjs"
+  },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/howard-stearns/million.git"
