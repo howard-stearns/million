@@ -6,7 +6,7 @@ import { joinMillion } from './demo-join.mjs';
 const sessionName = "0",
       session = await joinMillion(sessionName, {
         input: 1,
-        numberOfPartitions: 10,
+        numberOfPartitions: 3,
         fanout: 3,
 
         sessionName,
@@ -15,7 +15,8 @@ const sessionName = "0",
         join: './demo-join.mjs',
         launchBots: './node-bots.mjs',
         compute: './demo-compute.mjs',
-        collectResults: './demo-collect.mjs'
+        collectResults: './demo-collect.mjs',
+        logger: './demo-logger.mjs'
       });
 const output = await session.view.promiseOutput();
 await session.leave();

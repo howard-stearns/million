@@ -92,8 +92,8 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
     this.publish(viewId, 'partitionToWork', index);
   }
   removeWorker(viewId, index) { //  Update the accounting for a worker that has stopped working on their partition.
-    const workers = this.inProgress[index];
-    return workers.delete(viewId);
+    const workers = this.inProgress[index]; // Can be null if that partition never got started.
+    return workers?.delete(viewId);
   }
   endPartition({viewId, index, output}) { // Update the accounting for that partition and tell the viewId the next partition.
     this.removeWorker(viewId, index);
@@ -110,10 +110,9 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
 Computation.register(Computation.name);
 
 export class ComputationWorker extends Croquet.View { // Works on whatever part of the computation neeeds doing.
-  constructor(model, {logger = console.log.bind(console)} = {}) {
+  constructor(model) {
     super(model);
     this.model = model;
-    this.logger = logger;
     this.nextRequestId = 0;
     this.requests = {};
     this.subscribe(this.sessionId, 'modelConfirmation', this.modelConfirmation);
@@ -141,8 +140,10 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   startPartition(index) { return this.setModel('startPartition', index); }
   endPartition(index, result) { return this.setModel('endPartition', index, result); }
   trace(label, startTime, ...data) { this.logger?.(Date.now() - startTime, label, ...data); } // Conditionally log with ms since startTime
+  async promiseLogger() { this.logger ||= this.model.logger && (await import(this.model.logger)).log; }
 
   async promiseInputs() { // Answer a promise to ensure that this.model.inputs is assigned with the inputs for each partition.
+    await this.promiseLogger(); // Before checking model values, as it needs to happen in each participant.
     if (this.model.inputs) return;
     const start = Date.now(),
           { prepareInputs } = await import(this.model.prepareInputs),
@@ -161,7 +162,8 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
           { launchBots } = await import(this.model.launchBots),
           // Since these bots are for working THIS level, they use the same parameters as this first instance.
           // (But once they are connected to this session, this.model.bots will bet set so that THEY don't make more.
-          nBots = await launchBots(this.model.sessionName, this.model.originalOptions, {logger: this.logger}, this.model.requestedNumberOfBots);
+          requesting = Math.min(this.model.requestedNumberOfBots, this.model.numberOfPartitions),
+          nBots = await launchBots(this.model.sessionName, this.model.originalOptions, requesting);
     this.trace( 'bots', start, this.viewId, nBots);
     await this.setBots(nBots);
   }
@@ -185,6 +187,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     return output;  // The combined total of the next level.
   }
   async promiseComputation() { // Promise to work on the next available partition until all are complete.
+    await this.promiseLogger(); // Again, for when bots => inputs have already been produced.
     await this.promiseBots();
     const viewId = this.viewId;
     this.nextPartition = makeResolvablePromise();

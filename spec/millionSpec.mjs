@@ -18,13 +18,12 @@ describe("Million", function () {
               fanout,
               sessionName,
               requestedNumberOfBots,
+              //logger: './demo-logger.mjs',
               prepareInputs: './demo-prepare.mjs',
               join: './demo-join.mjs',
               launchBots: './node-bots.mjs',
               compute: './demo-compute.mjs',
               collectResults: './demo-collect.mjs'
-            }, {
-              logger: null
             }),
             output = await session.view.promiseOutput();
       //console.log(`${numberOfPartitions} % ${fanout} => ${output} (${requestedNumberOfBots} bots)`);
@@ -46,9 +45,9 @@ describe("Million", function () {
       }
     });
   }
-  //multiLevel("no bots", 0);
+  //test1("x", 4, 3, 2);
+  multiLevel("no bots", 0);
   multiLevel("one bot", 1);
-  //multiLevel("two bots", 2); // three partipants, which extra for fanout of 2, but not for 3.
-  //multiLevel("three bots", 3);
+  multiLevel("three bots", 3);
 });
       
