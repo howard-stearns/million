@@ -24,10 +24,10 @@ describe("Million", function () {
               compute: './demo-compute.mjs',
               collectResults: './demo-collect.mjs'
             }, {
-              //logger: null
+              logger: null
             }),
             output = await session.view.promiseOutput();
-      console.log(`${numberOfPartitions} % ${fanout} => ${output} (${requestedNumberOfBots} bots)`);
+      //console.log(`${numberOfPartitions} % ${fanout} => ${output} (${requestedNumberOfBots} bots)`);
       expect(output).toBe(numberOfPartitions);
       await session.leave();
     });
@@ -39,14 +39,16 @@ describe("Million", function () {
       }
     });
   }
-  function threeLevels(label, requestedNumberOfBots) {
+  function multiLevel(label, requestedNumberOfBots) {
     describe(label, function () {
       for (let n = 2; n <= 3; n++) {
         bakersDozen(`fanout ${n},`, n, requestedNumberOfBots);
       }
     });
   }
-  test1("4/3", 4, 3, 0);
-  //threeLevels('no bots', 0);
+  //multiLevel("no bots", 0);
+  multiLevel("one bot", 1);
+  //multiLevel("two bots", 2); // three partipants, which extra for fanout of 2, but not for 3.
+  //multiLevel("three bots", 3);
 });
       
