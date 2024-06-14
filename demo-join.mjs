@@ -1,6 +1,6 @@
 import { Croquet, Computation, ComputationWorker } from './index.mjs';
 
-export function joinMillion(sessionName, options = {}) { // Join sessionName, returning a promise for the connected session.
+export function joinMillion(sessionName, options = {}, viewOptions = null) { // Join sessionName, returning a promise for the connected session.
   // options will be used for initial setup.
   return Croquet.Session.join({
     appId: "com.ki1r0y.million",
@@ -9,6 +9,7 @@ export function joinMillion(sessionName, options = {}) { // Join sessionName, re
     password: "secret",
     model: Computation,
     view: ComputationWorker,
-    options
+    options,
+    viewOptions
   });
 }

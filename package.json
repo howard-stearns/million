@@ -4,7 +4,8 @@
   "description": "Run a computation using a million nodes.",
   "main": "node-app.mjs",
   "scripts": {
-    "test": "node node-app.mjs"
+    "start": "node node-app.mjs",
+    "test": "jasmine"
   },
   "repository": {
     "type": "git",
@@ -24,5 +25,8 @@
   "homepage": "https://github.com/howard-stearns/million#readme",
   "dependencies": {
     "@kilroy-code/croquet-in-memory": "^0.0.5"
+  },
+  "devDependencies": {
+    "jasmine": "^5.1.0"
   }
 }
