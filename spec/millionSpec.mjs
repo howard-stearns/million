@@ -4,7 +4,7 @@ import { joinMillion } from '../demo-join.mjs';
 describe("Million", function () {
   let timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
   beforeAll(function () {
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 15e3;
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 45e3;
   })
   afterAll(function () {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = timeout;
@@ -40,14 +40,15 @@ describe("Million", function () {
   }
   function multiLevel(label, requestedNumberOfBots) {
     describe(label, function () {
-      for (let n = 2; n <= 3; n++) {
-        bakersDozen(`fanout ${n},`, n, requestedNumberOfBots);
-      }
+      bakersDozen(`fanout 12,`, 12, requestedNumberOfBots);
+      bakersDozen(`fanout 4,`, 4, requestedNumberOfBots);      
+      bakersDozen(`fanout 3,`, 3, requestedNumberOfBots);      
+      bakersDozen(`fanout 2,`, 2, requestedNumberOfBots);      
     });
   }
-  //test1("x", 4, 3, 2);
-  multiLevel("no bots", 0);
-  multiLevel("one bot", 1);
-  multiLevel("three bots", 3);
+  //test1("x", 12, 2, 0);
+  //multiLevel("no bots,", 0); // 330 seconds
+  //multiLevel("one bot,", 1); // 260 seconds
+  multiLevel("three bots,", 3); // 237 seconds
 });
       

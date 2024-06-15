@@ -1,5 +1,6 @@
 /*
   Each session represents an ongoing permanent record of a partitionable computation, and has a guid identifier.
+
   When the calculation is complete, it has:
   - a list of inputs to each partition
   - a list of outputs from each partition
@@ -38,7 +39,7 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
       length = fanout;
       const logBaseFanout = Math.log(numberOfPartitions) / Math.log(length),
             cleanerLog = Math.round(10 * logBaseFanout) / 10, // logBaseFanout sometimes creeps above the integer, so round to nearest 10
-            remainingLevels = Math.ceil(cleanerLog) - 1,
+            remainingLevels = this.remainingLevels = Math.ceil(cleanerLog) - 1,
             maxSubCapacity = Math.pow(length, remainingLevels),
             parts = this.interiorPartitions = Array(length).fill(0); // If not filled, reduce won't iterate.
       parts.reduce((previousTotal, _, index) => { // Fill parts with the number of partitions needed at each index.
@@ -99,7 +100,7 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
     this.removeWorker(viewId, index);
     this.completed[index] = true;
     this.outputs[index] = output;
-    this.startNextPartition(viewId);
+    this.startnextPartition(viewId);
   }
   viewExit(viewId) { // Remove the partipant from the list of workers inProgress so that someone else will pick it up.
     for (let index = 0; index < this.inProgress.length; index++) {
@@ -137,9 +138,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   setInputs(inputs) { return this.setModel('setInputs', inputs); } // promise to set in model.
   setBots(nBots) { return this.setModel('setBots', nBots); }  
   setOutput(output) { return this.setModel('setOutput', output); }
-  startPartition(index) { return this.setModel('startPartition', index); }
-  endPartition(index, result) { return this.setModel('endPartition', index, result); }
-  trace(label, startTime, ...data) { this.logger?.(Date.now() - startTime, label, ...data); } // Conditionally log with ms since startTime
+  trace(label, startTime, ...data) { this.logger?.(this.model.sessionName, this.viewId, label, ...data, Date.now() - startTime); } // Conditionally log with ms since startTime
   async promiseLogger() { this.logger ||= this.model.logger && (await import(this.model.logger)).log; }
 
   async promiseInputs() { // Answer a promise to ensure that this.model.inputs is assigned with the inputs for each partition.
@@ -147,8 +146,8 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     if (this.model.inputs) return;
     const start = Date.now(),
           { prepareInputs } = await import(this.model.prepareInputs),
-          inputs = await prepareInputs(this.model.input, this.model.outputs.length);
-    this.trace('inputs', start, this.viewId, inputs);
+          inputs = await prepareInputs(this.model.input, this.model.outputs.length); // outputs is the adjusted length for this node.
+    this.trace('inputs', start, inputs);
     await this.setInputs(inputs);
   }
   async promiseBots() { // Answer a promise to ensure that this.model.bots is assigned with the number of bots launched
@@ -164,7 +163,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
           // (But once they are connected to this session, this.model.bots will bet set so that THEY don't make more.
           requesting = Math.min(this.model.requestedNumberOfBots, this.model.numberOfPartitions),
           nBots = await launchBots(this.model.sessionName, this.model.originalOptions, requesting);
-    this.trace( 'bots', start, this.viewId, nBots);
+    this.trace('bots', start, nBots);
     await this.setBots(nBots);
   }
   partitionToWork(index) {
@@ -180,7 +179,6 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
           subOptions = Object.assign({}, this.model.originalOptions, { // Reduce the problem a bit.
             numberOfPartitions: this.model.interiorPartitions[index]
           }),
-          //junk = console.log({session: this.model.sessionName, viewId: this.viewId, index, subName, parentTotal, nChildren,remainingLevels, maxSubCapacity, lastIndex, nthChildTotal: subOptions.numberOfPartitions}),
           session = await joinMillion(subName, subOptions, {logger: this.logger}),
           output = await session.view.promiseOutput(); // Waits for the whole total of partition and it's partitions.
     await session.leave();
@@ -197,20 +195,20 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
       const start = Date.now(),
             input = this.model.inputs[index],
             output = this.model.interiorPartitions ?  await this.coordinateNextLevel(input, index) :  await this.compute1(input, index);
-      this.trace('computation', start, viewId, 'index', index, output);
+      this.trace('computed index/answer', start, index, output);
       this.nextPartition = makeResolvablePromise();
       this.publish(this.sessionId, 'endPartition', {viewId, index, output});
       index = await this.nextPartition;
     } 
   }
   async promiseOutput() { // Answer a promise to ensure that this.model.output is assigned with the collected results, returning output.
-    if (this.model.output !== undefined) return this.model.output; // For convenience, returns output.
     await this.promiseComputation();
+    if (this.model.output !== undefined) return this.model.output; // For convenience, returns output.
     const start = Date.now(),
           { collectResults } = await import(this.model.collectResults),
           output = await collectResults(this.model.outputs),
           elapsed = Date.now() - start;
-    this.trace('output', start, this.viewId, output);
+    this.trace('output', start, output);
     await this.setOutput(output);
     return output;
   }
