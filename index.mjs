@@ -100,7 +100,7 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
     this.removeWorker(viewId, index);
     this.completed[index] = true;
     this.outputs[index] = output;
-    this.startnextPartition(viewId);
+    this.startNextPartition(viewId);
   }
   viewExit(viewId) { // Remove the partipant from the list of workers inProgress so that someone else will pick it up.
     for (let index = 0; index < this.inProgress.length; index++) {
