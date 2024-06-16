@@ -2,7 +2,7 @@
 
 This is a Proof-of-Concept of Web infrastructure for running a parallel computation on a million partitions.
 
-The number of nodes and all aspects of the computation are pluggable.
+The number of nodes and all aspects of the computation are pluggable, and the computation is robust against nodes connecting and disconnecting at will.
 
 ### Status
 
@@ -16,9 +16,9 @@ The number of nodes and all aspects of the computation are pluggable.
   - A javascript file can be specified to [**combine the results from an array of outputs**](demo-collect.mjs).
   - A javascript file can be specified to [**perform logging**](demo-logger.mjs).
 - As a system, the control page knows how many nodes are connected, and it automatically configures itself to provide the correct input and track the output.
-  - There could be as many as a million computing nodes connected, but the control page does not attempt to connect to all at once. Instead, it creates a tree network of control nodes for a partion of the connection space. Each node might end up as either a control node or computation node, under the direction of it's parent controller.
+  - There could be over a million computing nodes connected, but the control page does not attempt to connect to all at once. Instead, it creates a tree network of control nodes for a partion of the connection space, recursively. Each node might end up as either a control node or computation node, under the direction of it's parent controller.
   - Rather than relying on a million browsers to connect, a javascript file can be specified to [launch a number of robot nodes](node-bots.mjs) (e.g., in a data center), do their work as directed, and then shut down when no longer needed.
-- The running parameters are set up in a [small problem-specific file](node-app.mjs). The generic, resusable "infrastructure" for this is [less than 200 lines of code](index.mjs): one "model" of the the computation state that is identical in each node, and one pariticipant-specific "view" that either computes a parition, or coordinates another level of partitioning (i.e., another pair of these same two classes). It leans heavily on [Croquet](https://croquet.io/docs/croquet/) for networking that ensures that the models stay in sync, even if the number of partipants drops to zero during computation.
+- The running parameters are set up in a [small problem-specific file](node-app.mjs). The generic, resusable "infrastructure" for this is [just 200 lines of code](index.mjs): one "model" of the the computation state that is identical in each node, and one pariticipant-specific "view" that either computes a parition, or coordinates another level of partitioning (i.e., another pair of these same two classes). The app uses [Croquet](https://croquet.io/docs/croquet/) for networking that ensures that the models stay in sync, even if the number of partipants drops to zero during computation.
 
 As a PoC, there are a number of capabilities that are deferred for further work:
 

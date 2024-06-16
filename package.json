@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/howard-stearns/million#readme",
   "dependencies": {
-    "@kilroy-code/croquet-in-memory": "^0.0.5"
+    "@kilroy-code/croquet-in-memory": "^0.0.6"
   },
   "devDependencies": {
     "jasmine": "^5.1.0"
