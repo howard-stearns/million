@@ -18,12 +18,7 @@
   is recursively partitioned such that each task is handled by another session.
 */
 export const { Croquet } = (typeof window !== 'undefined') ? window : await import('@kilroy-code/croquet-in-memory/index.mjs');
-
-function makeResolvablePromise() { // Return a promise with a 'resolve' property.
-  let resolver, promise = new Promise(resolve => resolver = resolve);
-  promise.resolve = resolver;
-  return promise;
-}
+import { makeResolvablePromise } from './utilities.mjs';
 
 export class Computation extends Croquet.Model { // The abstract persistent state of the computation.
   init(parameters) {
@@ -149,7 +144,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     if (this.model.inputs) return;
     const start = this.trace('preparing inputs'),
           { prepareInputs } = await import(this.model.prepareInputs),
-          inputs = await prepareInputs(this.model.input, this.model.outputs.length); // outputs is the adjusted length for this node.
+          inputs = await prepareInputs(this.model.input, this.model.outputs.length, this.model.arificialDelay); // outputs is the adjusted length for this node.
     this.trace('prepared inputs', start, inputs.length);
     await this.setInputs(inputs);
   }
@@ -170,16 +165,11 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     await this.setBots(nBots);
   }
   partitionToWork(index) {
-    // let element = document?.getElementById(this.model.originalOptions.sessionName);
-    // if (element) {
-    //   let progress = this.model.inProgress.map(part => part.size);
-    //   element.textContent = progress;
-    // }
     this.nextPartition?.resolve(index);
   }
   async compute1(input, index) { // Promise the output of the computation of just one partition.
     const { compute } = await import(this.model.compute); // Browser will cache.
-    return compute(input, index);
+    return compute(input, index, this.model.artificialDelay);
   }
   async coordinateNextLevel(input, index) { // Promise the output of another session representing this partion to be further devided
     const { joinMillion } = await import(this.model.join),
@@ -197,14 +187,14 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     await this.promiseLogger(); // Again, for when bots => inputs have already been produced.
     await this.promiseBots();
     const viewId = this.viewId,
-          label = this.model.interiorPartitions ? 'coordinate' : 'compute';
+          label = this.model.interiorPartitions ? 'coordinating' : 'computing';
     this.nextPartition = makeResolvablePromise();
     this.publish(this.sessionId, 'startNextPartition', viewId);
     let index = await this.nextPartition;
     while (index >= 0) {
-      const start = this.trace('start ' + label, null, index),
+      const start = this.trace('start ' + label, null, index, this.model),
             input = this.model.inputs[index],
-            output = (label === 'compute') ? await this.compute1(input, index) : await this.coordinateNextLevel(input, index);
+            output = (label === 'computing') ? await this.compute1(input, index) : await this.coordinateNextLevel(input, index);
       this.trace('finished ' + label, start, index, output);
       this.nextPartition = makeResolvablePromise();
       this.publish(this.sessionId, 'endPartition', {viewId, index, output});
@@ -216,7 +206,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     if (this.model.output !== undefined) return this.model.output; // For convenience, returns output.
     const start = Date.now(),
           { collectResults } = await import(this.model.collectResults),
-          output = await collectResults(this.model.outputs),
+          output = await collectResults(this.model.outputs, this.model.artificialDelay),
           elapsed = Date.now() - start;
     this.trace('output', start, output);
     await this.setOutput(output);

@@ -58,25 +58,26 @@
 //    fanout=90 => 439 seconds, 0.6 ms/partition
 //    fanout=100 => 965 seconds, 1 ms/partition
 //  But... that was stupid. 10 bots / intermediate partition is 11 partipants in the session, working over 100 partitions, which is wasteful.
-//  So, adding only 9 bots / session is only 431 seconds, or less than 0.5 ms/partition
+//  So, adding only 9 bots / session is only 387 seconds, or less than 0.5 ms/partition
 
-// So, in this configuration (all on one NodeJS process on a laptop), a computation of a million parts takes 7.2 minutes of overhead.
+// So, in this configuration (all on one NodeJS process on a laptop), a computation of a million parts takes 7 minutes of overhead.
 
 import { joinMillion } from './demo-join.mjs';
 
-const fanout = 10, // 100 for a million partitions. Probably want to comment out the delay in demo-compute.mjs!
+const fanout = 3, // 100 for a million partitions. Probably want to comment out the delay in demo-compute.mjs!
       total = Math.pow(fanout, 3),
       start = Date.now(),
       session = await joinMillion({
         sessionName: "0",
         input: 1,
-        //logger: './demo-logger.mjs',
+        artificialDelay: 0, // ms
+        //logger: './console-logger.mjs',
 
         numberOfPartitions: total,
         fanout,
-        requestedNumberOfBots: 9,
+        //requestedNumberOfBots: 9,
         //requestedNumberOfBots: Math.floor(fanout / 4),
-        //requestedNumberOfBots: fanout-1,        
+        requestedNumberOfBots: fanout-1,        
 
         prepareInputs: './demo-prepare.mjs',
         join: './demo-join.mjs',

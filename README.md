@@ -7,6 +7,16 @@ The number of nodes and all aspects of the computation are pluggable, and the co
 ### Status
 
 - For development, I'm using a toy ["croquet in memory"](https://github.com/kilroy-code/croquet-in-memory) implementation in which **all the nodes are running in the same NodeJS image** with no networking, which facilitates debugging. Next step is to use real (networked) croquet, and real **separate-process/separate-machine bots.**
+  - [x] Use real croquet 1.0.5. (One small bug encountered. Worked around.)
+  - HTML page:
+    - [x] At all
+    - [ ] Changeable during/after computation to redo with different paramters
+    - [ ] Do not bring down veil on joining sub-sessions.
+    - [ ] Redirect newcomer to the session they can do the most good.
+    - [ ] What infrastructure data should be surfaced to root page?
+  - Independent bots
+    - [ ] NodeJS version from Aran
+    - [ ] Recognize Croquet module as global and as bottable module
 - Each level of partitioning is responsible for its own bots, which only work at that level. Next step is to allow bots or browser visitors to report to the root node and get redirected to wherever they are needed.
 
 ### Description

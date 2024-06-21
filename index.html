@@ -1,0 +1,43 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@croquet/croquet@1.0.5"></script>
+  </head>
+  <body>
+    <blockquote>This version has no bots! Using too many parts can take a very long time!</blockquote>
+    <label>total parts: <input id="numberOfPartitions" type="number" value="27" min="2"></input></label>
+    <br/>
+    <label>fanout at each level: <input id="fanout" type="number" value="3" min="2"></input></label>
+    <br/>
+    <button id="compute">Compute with the above parameters</button>
+    <label>answer: <span id="output">...</span></label>
+    <ul>
+      <li id="0"><activity></activity> <distribution></distribution> <ul></ul></li>
+    </ul>
+
+    <script type="module">
+      import { joinMillion, Croquet } from './demo-join.mjs';
+      Croquet.Constants.version = '0.0.32';
+      compute.onclick  = async function doit() {
+        output.textContent = "...";
+        document.getElementById('0').querySelector('ul').innerHTML = '';
+        const session = window.session = await joinMillion({ // window.session to expose to console for debugging
+          sessionName: "0",
+          input: 1,
+          artificialDelay: 1e3,
+          logger: './demo-logger.mjs',
+
+          numberOfPartitions: parseInt(numberOfPartitions.value),
+          fanout: parseInt(fanout.value),
+          requestedNumberOfBots: 0,
+
+          prepareInputs: './demo-prepare.mjs',
+          join: './demo-join.mjs',
+          launchBots: './node-bots.mjs',
+          compute: './demo-compute.mjs',
+          collectResults: './demo-collect.mjs'
+        });
+        output.textContent = await session.view.promiseOutput();
+      }
+    </script>
+  </body>
+</html>  

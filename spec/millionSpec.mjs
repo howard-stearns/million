@@ -14,7 +14,8 @@ describe("Million", function () {
       const session = await joinMillion({
         sessionName: "0",
         input: 1,
-        //logger: './demo-logger.mjs',
+        artificialDelay: 0, // ms        
+        //logger: './console-logger.mjs',
 
         numberOfPartitions,
         fanout,
