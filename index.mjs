@@ -204,11 +204,10 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   async promiseOutput() { // Answer a promise to ensure that this.model.output is assigned with the collected results, returning output.
     await this.promiseComputation();
     if (this.model.output !== undefined) return this.model.output; // For convenience, returns output.
-    const start = Date.now(),
+    const start = this.trace('collect output', null),
           { collectResults } = await import(this.model.collectResults),
-          output = await collectResults(this.model.outputs, this.model.artificialDelay),
-          elapsed = Date.now() - start;
-    this.trace('output', start, output);
+          output = await collectResults(this.model.outputs, this.model.artificialDelay);
+    this.trace('collected output', start, output);
     await this.setOutput(output);
     return output;
   }

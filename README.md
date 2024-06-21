@@ -14,6 +14,7 @@ The number of nodes and all aspects of the computation are pluggable, and the co
     - [ ] Do not bring down veil on joining sub-sessions.
     - [ ] Redirect newcomer to the session they can do the most good.
     - [ ] What infrastructure data should be surfaced to root page?
+    - [ ] QR code for phone-demoing
   - Independent bots
     - [ ] NodeJS version from Aran
     - [x] Recognize Croquet module as global and as bottable module

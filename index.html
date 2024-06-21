@@ -1,6 +1,10 @@
 <html>
   <head>
     <script src="https://cdn.jsdelivr.net/npm/@croquet/croquet@1.0.5"></script>
+    <style>
+      activity { color: royalblue; width: 170px; display: inline-block; }
+      activity.completed { color: seagreen; }
+    </style>
   </head>
   <body>
     <blockquote>This version has no bots! Using too many parts can take a very long time!</blockquote>
@@ -16,7 +20,7 @@
 
     <script type="module">
       import { joinMillion, Croquet } from './demo-join.mjs';
-      Croquet.Constants.version = '0.0.32';
+      Croquet.Constants.version = '0.0.37';
       compute.onclick  = async function doit() {
         output.textContent = "...";
         document.getElementById('0').querySelector('ul').innerHTML = '';
