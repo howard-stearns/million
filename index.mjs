@@ -181,10 +181,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
           }),
           session = await joinMillion(subOptions),
           output = await session.view.promiseOutput(); // Waits for the whole total of partition and it's partitions.
-    let viewId = session.view.viewId;
-    console.log('leaving session', viewId);
     await session.leave();
-    console.log('left session', viewId);
     return output;  // The combined total of the next level.
   }
   async promiseComputation() { // Promise to work on the next available partition until all are complete.
