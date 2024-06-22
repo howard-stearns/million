@@ -1,5 +1,6 @@
-import { joinMillion } from '../demo-join.mjs';
+import { joinMillion, Croquet } from '../demo-join.mjs';
 
+Croquet.Constants.version = "0.0.13"; // A hook for letting us rerun tests by upping the version.
 
 describe("Million", function () {
   let timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
@@ -48,9 +49,9 @@ describe("Million", function () {
       bakersDozen(`fanout 2,`, 2, requestedNumberOfBots);      
     });
   }
-  //test1("x", 2, 2, 0);
-  multiLevel("no bots,", 0); // ~340 seconds
-  multiLevel("one bot,", 1); // ~200 seconds
-  multiLevel("three bots,", 3); // ~140 seconds
+  //test1("x", 3, 2, 1);
+  multiLevel("no bots,", 0); // 81 seconds
+  //multiLevel("one bot,", 1); // ~200 seconds
+  //multiLevel("three bots,", 3); // ~140 seconds
 });
       

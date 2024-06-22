@@ -7,3 +7,14 @@ export function makeResolvablePromise() { // Return a promise with a 'resolve' p
   promise.resolve = resolver;
   return promise;
 }
+
+export const performance = (typeof window !== 'undefined') ? window.performance : (await import('perf_hooks')).performance ;
+var requestAnimationFrame, pending = null;
+if (!requestAnimationFrame) {
+  requestAnimationFrame = handler => {
+    if (pending) return;
+    let paint = _ => { pending = null; handler(performance.now()); };
+    pending = setTimeout(paint, 16);
+  }
+}
+export { requestAnimationFrame };

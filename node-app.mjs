@@ -65,19 +65,19 @@
 import { joinMillion } from './demo-join.mjs';
 
 const fanout = 3, // 100 for a million partitions. Probably want to comment out the delay in demo-compute.mjs!
-      total = Math.pow(fanout, 3),
+      total = 3, //Math.pow(fanout, 3),
       start = Date.now(),
       session = await joinMillion({
         sessionName: "0",
         input: 1,
         artificialDelay: 0, // ms
-        //logger: './console-logger.mjs',
+        logger: './console-logger.mjs',
 
         numberOfPartitions: total,
         fanout,
         //requestedNumberOfBots: 9,
         //requestedNumberOfBots: Math.floor(fanout / 4),
-        requestedNumberOfBots: fanout-1,        
+        //requestedNumberOfBots: fanout-1,        
 
         prepareInputs: './demo-prepare.mjs',
         join: './demo-join.mjs',
@@ -85,7 +85,9 @@ const fanout = 3, // 100 for a million partitions. Probably want to comment out 
         compute: './demo-compute.mjs',
         collectResults: './demo-collect.mjs'
       });
-const output = await session.view.promiseOutput();
+const output = await session.view.promiseOutput(),
+      levels = session.model.remainingLevels || 0;
 await session.leave();
 const elapsed = Date.now() - start;
-console.log(`final answer: ${output}, overhead levels: ${session.model.remainingLevels || 0}, fanout: ${fanout}, elapsed: ${elapsed}, per part: ${elapsed/total}`);
+console.log(`final answer: ${output}, overhead levels: ${levels}, fanout: ${fanout}, elapsed: ${elapsed}, per part: ${elapsed/total}`);
+process.exit(0); // Bug in NodeJS Croquet

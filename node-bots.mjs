@@ -10,9 +10,13 @@ export async function launchBots(options, nBots) {
   // (Options won't be used again, but it is part of defining session id and so it must match.)
   const promises = Array.from({length: nBots}, () => joinMillion(options));
   const sessions = await Promise.all(promises);
-  // Now set them all to work, but don't wait for them to finish.
-  sessions.forEach(session => {
-    session.view.promiseOutput().then(() => session.leave());
+  // Now set them all to work, but don't wait here for them to finish overall.
+  sessions.forEach(async session => {
+    await session.view.promiseOutput();
+    let viewId = session.view.viewId;
+    console.log('bot leaving', viewId);
+    await session.leave();
+    console.log('bot left', viewId);
   });
   return nBots;
 }

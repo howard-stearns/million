@@ -17,7 +17,8 @@
   There are limits to how many participants can be connected simultaneously. If that isn't enough for the number of partitions, the calculation
   is recursively partitioned such that each task is handled by another session.
 */
-export const { Croquet } = (typeof window !== 'undefined') ? window : await import('@kilroy-code/croquet-in-memory/index.mjs');
+//export const { Croquet } = (typeof window !== 'undefined') ? window : await import('@kilroy-code/croquet-in-memory/index.mjs');
+export const Croquet = (typeof window !== 'undefined') ? window.Croquet : await import('@croquet/croquet');
 import { makeResolvablePromise } from './utilities.mjs';
 
 export class Computation extends Croquet.Model { // The abstract persistent state of the computation.
@@ -134,7 +135,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   setOutput(output) { return this.setModel('setOutput', output); }
   trace(label, startTime, ...data) {  // Conditionally log with ms since startTime
     const now = Date.now();
-    this.logger?.(this.model.originalOptions.sessionName, this.viewId, label, ...data, (startTime ? now - startTime : ''));
+    this.logger?.(this.session.name, this.viewId, label, ...data, (startTime ? now - startTime : ''));
     return now;
   }
   async promiseLogger() { this.logger ||= this.model.logger && (await import(this.model.logger)).log; }
@@ -173,14 +174,17 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   }
   async coordinateNextLevel(input, index) { // Promise the output of another session representing this partion to be further devided
     const { joinMillion } = await import(this.model.join),
-          subName = `${this.model.originalOptions.sessionName}-${index}`, // The reproducible "address" of the next node down in this problem.
+          subName = `${this.session.name}-${index}`, // The reproducible "address" of the next node down in this problem.
           subOptions = this.newOptions({ // Reduce the problem a bit.
             sessionName: subName,
             numberOfPartitions: this.model.interiorPartitions[index],
           }),
           session = await joinMillion(subOptions),
           output = await session.view.promiseOutput(); // Waits for the whole total of partition and it's partitions.
+    let viewId = session.view.viewId;
+    console.log('leaving session', viewId);
     await session.leave();
+    console.log('left session', viewId);
     return output;  // The combined total of the next level.
   }
   async promiseComputation() { // Promise to work on the next available partition until all are complete.
