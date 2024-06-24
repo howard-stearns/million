@@ -57,7 +57,6 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
   setOutput([requestId, output]) { // Set Inputs and tell everyone of the update.
     this.output = output;
     this.publish(this.sessionId, 'modelConfirmation', requestId);
-    this.publish(this.sessionId, 'computationComplete', output);
   }
   // There are three state properties associated with the calculation of partition results:
   // - outputs is an array of the result of each corresponding partition
@@ -184,7 +183,10 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   }
   async promiseOutput() { // Answer a promise to ensure that this.model.output is assigned with the collected results, returning output.
     await this.promiseComputation();
-    if (this.model.output !== undefined) return this.model.output; // For convenience, returns output.
+    if (this.model.output !== undefined) {
+      this.publish(this.sessionId, 'computationComplete', this.model.output);
+      return this.model.output; // For convenience, returns output.
+    }
     const start = this.trace('collect output', null),
           { collectResults } = await import(this.model.collectResults),
           output = await collectResults(this.model.outputs, this.model.artificialDelay);

@@ -12,7 +12,10 @@ export function log(sessionName, viewId, label, ...data) { // Called from the ma
           subName = `${sessionName}-${index}`;
     if (document.getElementById(subName)) return;
     const child = document.createElement('li');
-    child.id = subName;
+    const name = document.createElement('name');
+    name.textContent = child.id = subName;
+    child.append(name);
+    child.append(' ');
     child.append(document.createElement('activity'));
     child.append(document.createElement('distribution'));
     child.append(document.createElement('ul'));

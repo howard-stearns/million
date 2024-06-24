@@ -14,10 +14,12 @@
     <br/>
     <label>fanout at each level: <input id="fanout" type="number" min="2"></input></label>
     <br/>
+    <label>version counter <input id="version" type="number"></input> <button onclick="version.value = parseInt(version.value)+1; version.onchange({target:version})">increment</button></label>
+    <br/>
     <button id="compute">Compute with the above parameters</button>
     <label>answer: <span id="output">...</span></label>
     <ul>
-      <li><activity></activity> <distribution></distribution> <ul></ul></li>
+      <li><name></name> <activity></activity> <distribution></distribution> <ul></ul></li>
     </ul>
 
     <script type="module">
@@ -25,19 +27,20 @@
       import { player } from './player.mjs';
       Croquet.App.root = false; // disable the joining overlay
       var computer = null;
-      async function responder({sessionAction = null, numberOfPartitions, fanout}) { // Respond to player controller
-        console.log('responding', {sessionAction, numberOfPartitions, fanout});
+      async function responder({sessionAction = null, numberOfPartitions, fanout, version}) { // Respond to player controller
+        console.log('responding', {sessionAction, numberOfPartitions, fanout, version});
         if (fanout) document.getElementById('fanout').value = fanout;
         if (numberOfPartitions) document.getElementById('numberOfPartitions').value = numberOfPartitions;
+        if (version) document.getElementById('version').value = version;
         switch (sessionAction) {
         case 'join':
           compute.textContent = 'Stop';
           output.textContent = "...";
           if (computer) return;
           let topLI = document.querySelector('body > ul > li'),
-              sessionName = "X3";
+              sessionName = "X" + version;
           topLI.querySelector('ul').innerHTML = '';
-          topLI.id = sessionName;
+          topLI.querySelector('name').textContent = topLI.id = sessionName;
           computer = window.computer = await joinMillion({ // window.computer to expose to console for debugging
             sessionName,
             input: 1,
@@ -52,9 +55,11 @@
             compute: './demo-compute.mjs',
             collectResults: './demo-collect.mjs'
           });
-          computer.view.oncomplete = () => setTimeout(() => responder({sessionAction: 'leave'}));
-          output.textContent = await computer.view.promiseOutput();
-          computer.view?.oncomplete();
+          computer.view.oncomplete = answer => setTimeout(() => {
+            output.textContent = answer;
+            responder({sessionAction: 'leave'});
+          });
+          computer.view.promiseOutput();
           break;
         case 'leave':
           compute.textContent = 'Compute with the above parameters';
@@ -69,19 +74,20 @@
       }
       const controller = window.controller = await player('controller1', {}, responder);
       compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
-      numberOfPartitions.onchange = () => controller.view.setParameters({
-        numberOfPartitions: parseInt(numberOfPartitions.value),
-        sessionAction: 'leave'
-      });
-      fanout.onchange = () => controller.view.setParameters({
-        fanout: parseInt(fanout.value),
-        sessionAction: 'leave'
-      });
+      function numberChanger(event) {
+        controller.view.setParameters({
+          [event.target.id]: parseInt(event.target.value),
+          sessionAction: 'leave'
+        });
+      }
+      function current(name, ultimateDefault) { return controller.model.parameters[name] || parseInt(document.getElementById(name).value || ultimateDefault); }
+      numberOfPartitions.onchange = fanout.onchange = version.onchange = numberChanger;
       if (!numberOfPartitions.value || !fanout.value) { // Set to the value everyone else or default, and get the sessionAction everyone else has.
         console.log(controller.model.parameters);
         controller.view.setParameters({
-          numberOfPartitions: controller.model.parameters.numberOfPartitions || parseInt(numberOfPartitions.value || '4'),
-          fanout: controller.model.parameters.fanout || parseInt(fanout.value || '4')
+          numberOfPartitions: current('numberOfPartitions', '4'),
+          fanout: current('fanout', '4'),
+          version: current('version', '1')
         });
       }
     </script>
