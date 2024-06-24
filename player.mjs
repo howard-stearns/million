@@ -21,14 +21,10 @@ class PlayerModel extends Croquet.Model { // Keeps track of the model.
     this.subscribe(this.sessionId, Q.VIEW_EXIT, this.viewExit);    
   }
   viewJoin(viewId) {
-    console.log('enter', viewId, this.viewCount);
     this.publish(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCount);
-    console.log('published');    
   }
   viewExit(viewId) {
-    console.log('exit', viewId, this.viewCount);
     this.publish(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCount);
-    console.log('published');
   }
   setParameters(parameters) {
     this.parameters = Object.assign(this.parameters, parameters);
@@ -52,7 +48,6 @@ class PlayerView extends Croquet.View { // Interface to the model.
     setTimeout(() => this.onchange?.(parameters));
   }
   viewCountChanged(viewCount) {
-    console.log({viewCount});
     setTimeout(() => this.onchange?.({sessionAction: 'viewCountChanged', ...this.model.parameters, viewCount}));
   }
 }

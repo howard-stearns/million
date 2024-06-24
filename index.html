@@ -31,7 +31,6 @@
       Croquet.App.root = false; // disable the joining overlay
       var computer = null;
       async function responder(parameters) { // Respond to player controller
-        console.log(parameters);
 
         function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
         ['fanout', 'numberOfPartitions', 'version'].forEach(update);

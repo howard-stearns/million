@@ -4,10 +4,7 @@ export function log(sessionName, viewId, label, ...data) { // Called from the ma
         activity = sessionElement?.querySelector('activity'),
         dist = sessionElement?.querySelector('distribution');
   if (!sessionElement) return; // Got removed while we were working.
-  if (label.startsWith('start co')) {
-    dist.textContent = data[1].inProgress.map(part => part.size);
-  }
-  if (label === 'start coordinating') {
+  if (label === 'start coordinating') {  // When we lay down another level, add the display structure.
     const index = data[0],
           subName = `${sessionName}-${index}`;
     if (document.getElementById(subName)) return;
@@ -20,9 +17,12 @@ export function log(sessionName, viewId, label, ...data) { // Called from the ma
     child.append(document.createElement('distribution'));
     child.append(document.createElement('ul'));
     sessionElement.querySelector('ul').append(child);
-    label += ' ' + index;
   }
-  if (label === 'collected output') {
+  if (label.startsWith('start co')) {
+    dist.textContent = data[1].inProgress.map(part => part.size);
+    label += ' ' + data[0];
+    console.log('LABEL:', label, data);
+  } else if (label === 'collected output') {
     dist.textContent = '';
     activity.classList.add('completed');
     label += ': ' + data[0];
