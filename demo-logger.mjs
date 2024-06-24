@@ -3,6 +3,7 @@ export function log(sessionName, viewId, label, ...data) { // Called from the ma
   const sessionElement = document.getElementById(sessionName),
         activity = sessionElement?.querySelector('activity'),
         dist = sessionElement?.querySelector('distribution');
+  if (!sessionElement) return; // Got removed while we were working.
   if (label.startsWith('start co')) {
     dist.textContent = data[1].inProgress.map(part => part.size);
   }
