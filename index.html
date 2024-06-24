@@ -1,46 +1,88 @@
 <html>
   <head>
-    <script src="https://cdn.jsdelivr.net/npm/@croquet/croquet@1.0.5"></script>
+    <title>million</title>
+    <meta name="viewport" content="initial-scale=1, viewport-fit=cover">
+    <script src="https://cdn.jsdelivr.net/npm/@croquet/croquet@1.1.0"></script>
     <style>
       activity { color: royalblue; width: 170px; display: inline-block; }
       activity.completed { color: seagreen; }
+      /* div#croquet_spinnerOverlay { display: none; }       */
     </style>
   </head>
   <body>
-    <blockquote>This version has no bots! Using too many parts can take a very long time!</blockquote>
-    <label>total parts: <input id="numberOfPartitions" type="number" value="27" min="2"></input></label>
+    <label>total parts: <input id="numberOfPartitions" type="number" min="2"></input></label>
     <br/>
-    <label>fanout at each level: <input id="fanout" type="number" value="3" min="2"></input></label>
+    <label>fanout at each level: <input id="fanout" type="number" min="2"></input></label>
     <br/>
     <button id="compute">Compute with the above parameters</button>
     <label>answer: <span id="output">...</span></label>
     <ul>
-      <li id="0"><activity></activity> <distribution></distribution> <ul></ul></li>
+      <li><activity></activity> <distribution></distribution> <ul></ul></li>
     </ul>
 
     <script type="module">
-      import { joinMillion, Croquet } from './demo-join.mjs';
-      Croquet.Constants.version = '0.0.37';
-      compute.onclick  = async function doit() {
-        output.textContent = "...";
-        document.getElementById('0').querySelector('ul').innerHTML = '';
-        const session = window.session = await joinMillion({ // window.session to expose to console for debugging
-          sessionName: "0",
-          input: 1,
-          artificialDelay: 1e3,
-          logger: './demo-logger.mjs',
+      import { joinMillion } from './demo-join.mjs';
+      import { player } from './player.mjs';
+      Croquet.App.root = false; // disable the joining overlay
+      var computer = null;
+      async function responder({sessionAction = null, numberOfPartitions, fanout}) { // Respond to player controller
+        console.log('responding', {sessionAction, numberOfPartitions, fanout});
+        if (fanout) document.getElementById('fanout').value = fanout;
+        if (numberOfPartitions) document.getElementById('numberOfPartitions').value = numberOfPartitions;
+        switch (sessionAction) {
+        case 'join':
+          compute.textContent = 'Stop';
+          output.textContent = "...";
+          if (computer) return;
+          let topLI = document.querySelector('body > ul > li'),
+              sessionName = "X3";
+          topLI.querySelector('ul').innerHTML = '';
+          topLI.id = sessionName;
+          computer = window.computer = await joinMillion({ // window.computer to expose to console for debugging
+            sessionName,
+            input: 1,
+            artificialDelay: 1e3,
+            logger: './demo-logger.mjs',
 
-          numberOfPartitions: parseInt(numberOfPartitions.value),
-          fanout: parseInt(fanout.value),
-          requestedNumberOfBots: 0,
+            numberOfPartitions,
+            fanout,
 
-          prepareInputs: './demo-prepare.mjs',
-          join: './demo-join.mjs',
-          launchBots: './node-bots.mjs',
-          compute: './demo-compute.mjs',
-          collectResults: './demo-collect.mjs'
+            prepareInputs: './demo-prepare.mjs',
+            join: './demo-join.mjs',
+            compute: './demo-compute.mjs',
+            collectResults: './demo-collect.mjs'
+          });
+          computer.view.oncomplete = () => setTimeout(() => responder({sessionAction: 'leave'}));
+          output.textContent = await computer.view.promiseOutput();
+          computer.view?.oncomplete();
+          break;
+        case 'leave':
+          compute.textContent = 'Compute with the above parameters';
+          if (!computer) return;
+          await computer.leave();
+          computer = null;
+        case null:
+          break;
+        default:
+          console.warn(`Unrecognized sessionAction '${sessionAction}'.`);
+        }
+      }
+      const controller = window.controller = await player('controller1', {}, responder);
+      compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
+      numberOfPartitions.onchange = () => controller.view.setParameters({
+        numberOfPartitions: parseInt(numberOfPartitions.value),
+        sessionAction: 'leave'
+      });
+      fanout.onchange = () => controller.view.setParameters({
+        fanout: parseInt(fanout.value),
+        sessionAction: 'leave'
+      });
+      if (!numberOfPartitions.value || !fanout.value) { // Set to the value everyone else or default, and get the sessionAction everyone else has.
+        console.log(controller.model.parameters);
+        controller.view.setParameters({
+          numberOfPartitions: controller.model.parameters.numberOfPartitions || parseInt(numberOfPartitions.value || '4'),
+          fanout: controller.model.parameters.fanout || parseInt(fanout.value || '4')
         });
-        output.textContent = await session.view.promiseOutput();
       }
     </script>
   </body>
