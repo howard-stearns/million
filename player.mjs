@@ -5,23 +5,34 @@ import { Croquet, join } from './administrivia.mjs';
 // can change parameters with session.view.setParameters(),
 // and gets notified by onchange when the parameters change.
 
+const Q = Croquet.Constants;
+Q.VIEW_JOIN = 'view-join';
+Q.VIEW_EXIT = 'view-exit';
+Q.SET_PARAMETERS = 'setParameters';
+Q.PARAMETERS_SET = 'parametersSet';
+Q.VIEW_COUNT_CHANGED = 'viewCountChanged';
+
 class PlayerModel extends Croquet.Model { // Keeps track of the model.
   init(parameters) {
     super.init();
     this.parameters = parameters;
-    this.subscribe(this.sessionId, 'setParameters', this.setParameters);
-    this.subscribe(this.sessionId, 'view-join', this.viewJoin);
-    this.subscribe(this.sessionId, 'view-join', this.viewExit);    
+    this.subscribe(this.sessionId, Q.SET_PARAMETERS, this.setParameters);
+    this.subscribe(this.sessionId, Q.VIEW_JOIN, this.viewJoin);
+    this.subscribe(this.sessionId, Q.VIEW_EXIT, this.viewExit);    
   }
   viewJoin(viewId) {
-    this.publish(this.sessionId, 'viewCountChanged', this.viewCount);
+    console.log('enter', viewId, this.viewCount);
+    this.publish(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCount);
+    console.log('published');    
   }
   viewExit(viewId) {
-    this.publish(this.sessionId, 'viewCountChanged', this.viewCount);
+    console.log('exit', viewId, this.viewCount);
+    this.publish(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCount);
+    console.log('published');
   }
   setParameters(parameters) {
     this.parameters = Object.assign(this.parameters, parameters);
-    this.publish(this.sessionId, 'parametersSet', this.parameters);
+    this.publish(this.sessionId, Q.PARAMETERS_SET, this.parameters);
   }
 }
 PlayerModel.register(PlayerModel.name);
@@ -31,8 +42,8 @@ class PlayerView extends Croquet.View { // Interface to the model.
     super(model);
     this.model = model;
     this.onchange = onchange;
-    this.subscribe(this.sessionId, 'parametersSet', this.parametersSet);
-    this.subscribe(this.sessionId, 'viewCountChanged', this.viewCountChanged);
+    this.subscribe(this.sessionId, Q.PARAMETERS_SET, this.parametersSet);
+    this.subscribe(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCountChanged);
   }
   setParameters(parameters) {
     this.publish(this.sessionId, 'setParameters', parameters);
@@ -41,7 +52,8 @@ class PlayerView extends Croquet.View { // Interface to the model.
     setTimeout(() => this.onchange?.(parameters));
   }
   viewCountChanged(viewCount) {
-    setTimeout(() => this.onchange?.({sessionAction: 'viewCountChanged', viewCount, ...this.model.parameters}));
+    console.log({viewCount});
+    setTimeout(() => this.onchange?.({sessionAction: 'viewCountChanged', ...this.model.parameters, viewCount}));
   }
 }
 

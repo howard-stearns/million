@@ -18,6 +18,8 @@
     <br/>
     <button id="compute">Compute with the above parameters</button>
     <label>answer: <span id="output">...</span></label>
+    <br/>
+    <label>people <span id="viewCount">1</span></label>
     <ul>
       <li><name></name> <activity></activity> <distribution></distribution> <ul></ul></li>
     </ul>
@@ -28,17 +30,19 @@
       import { player } from './player.mjs';
       Croquet.App.root = false; // disable the joining overlay
       var computer = null;
-      async function responder({sessionAction = null, numberOfPartitions, fanout, version}) { // Respond to player controller
-        if (fanout) document.getElementById('fanout').value = fanout;
-        if (numberOfPartitions) document.getElementById('numberOfPartitions').value = numberOfPartitions;
-        if (version) document.getElementById('version').value = version;
-        switch (sessionAction) {
+      async function responder(parameters) { // Respond to player controller
+        console.log(parameters);
+
+        function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
+        ['fanout', 'numberOfParitions', 'version'].forEach(update);
+
+        switch (parameters.sessionAction || null) {
         case 'join':
           compute.textContent = 'Stop';
           output.textContent = "...";
           if (computer) return;
           let topLI = document.querySelector('body > ul > li'),
-              sessionName = "X" + version;
+              sessionName = "X" + parameters.version;
           topLI.querySelector('ul').innerHTML = '';
           topLI.querySelector('name').textContent = topLI.id = sessionName;
           computer = window.computer = await joinMillion({ // window.computer to expose to console for debugging
@@ -47,8 +51,8 @@
             artificialDelay: 1e3,
             logger: './demo-logger.mjs',
 
-            numberOfPartitions,
-            fanout,
+            numberOfPartitions: parameters.numberOfPartitions,
+            fanout: parameters.fanout,
 
             prepareInputs: './demo-prepare.mjs',
             join: './demo-join.mjs',
@@ -67,13 +71,15 @@
           await computer.leave();
           computer = null;
         case null:
-        case 'viewcountChanged':
+          break;
+        case 'viewCountChanged':
+          viewCount.textContent = parameters.viewCount;
           break;
         default:
-          console.warn(`Unrecognized sessionAction '${sessionAction}'.`);
+          console.warn(`Unrecognized sessionAction '${parameters.sessionAction}'.`);
         }
       }
-      const controller = window.controller = await player('controller1', {}, responder);
+      const controller = window.controller = await player('controller2', {}, responder);
       compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
       function numberChanger(event) {
         controller.view.setParameters({
