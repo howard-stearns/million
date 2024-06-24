@@ -19,7 +19,7 @@
     <button id="compute">Compute with the above parameters</button>
     <label>answer: <span id="output">...</span></label>
     <br/>
-    <label>people <span id="viewCount">1</span></label>
+    <label>people <span id="viewCount">1</span></label> <a href="https://github.com/howard-stearns/million">source code</a>
     <ul>
       <li><name></name> <activity></activity> <distribution></distribution> <ul></ul></li>
     </ul>
@@ -34,7 +34,7 @@
         console.log(parameters);
 
         function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
-        ['fanout', 'numberOfParitions', 'version'].forEach(update);
+        ['fanout', 'numberOfPartitions', 'version'].forEach(update);
 
         switch (parameters.sessionAction || null) {
         case 'join':
