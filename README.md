@@ -30,7 +30,6 @@ Even as PoC, there things that need to be improved in order to fully demonstrate
 - A participant stays connected to all the ancestor computation nodes from where it working up. It should not need to, and indeed, we can't have thousands of participants staying connected to the root computation.
 - Demoing:
   - Show number of control participants and total participants.
-  - QR code for others joining.
   - When told to stop, leave active session, not just the root.
 - Launch more bots
 
