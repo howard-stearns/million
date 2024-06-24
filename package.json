@@ -1,10 +1,8 @@
 {
   "name": "million",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Run a computation using a million nodes.",
-  "main": "node-app.mjs",
   "scripts": {
-    "start": "node node-app.mjs",
     "test": "jasmine"
   },
   "repository": {
