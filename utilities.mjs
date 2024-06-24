@@ -1,3 +1,5 @@
+export const Croquet = (typeof window !== 'undefined') ? window.Croquet : await import('@croquet/croquet');
+
 export function delay(ms) { // Promise to resolve after the specified milliseconds.
   return new Promise(resolve => setTimeout(resolve, ms));
 }
