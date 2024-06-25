@@ -14,7 +14,7 @@
     <br/>
     <label>fanout at each level: <input id="fanout" type="number" min="2"></input></label>
     <br/>
-    <label>version counter <input id="version" type="number"></input> <button onclick="version.value = parseInt(version.value)+1; version.onchange({target:version})">increment</button></label>
+    <label style="color: grey">version counter <input style="color: grey" id="version" type="number"></input> <button  style="color: grey" onclick="version.value = parseInt(version.value)+1; version.onchange({target:version})">increment</button></label>
     <br/>
     <button id="compute">Compute with the above parameters</button>
     <label>answer: <span id="output">...</span></label>
@@ -78,7 +78,7 @@
           console.warn(`Unrecognized sessionAction '${parameters.sessionAction}'.`);
         }
       }
-      const controller = window.controller = await player('controller2', {}, responder);
+      const controller = window.controller = await player('controller3', {}, responder);
       compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
       function numberChanger(event) {
         controller.view.setParameters({
