@@ -31,6 +31,10 @@ Even as PoC, there things that need to be improved in order to fully demonstrate
 - When told to stop, leave active session, not just the root.
 - Bots: more; show bot count on page.
 
+- [ ] specify whether to use workSubproblem
+- [ ] auto step in browser
+- [ ] Use requestAnimationFrame in place of some setTimeouts
+
 
 
 

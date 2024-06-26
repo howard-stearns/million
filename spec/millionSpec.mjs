@@ -1,12 +1,16 @@
 import { makeResolvablePromise, delay } from '../utilities.mjs';
 import { player } from '../player.mjs';
 import { joinMillion } from '../demo-join.mjs';
+import { ComputationWorker } from '../index.mjs';
+
+jasmine.getEnv().configure({random: false});
 
 describe("Million", function () {
   const forcer = Math.random(),
         timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL,
         testParameters = {
           artificialDelay: 0, // ms
+          //logger: './console-logger.mjs',
           prepareInputs: './demo-prepare.mjs',
           join: './demo-join.mjs',
           compute: './demo-compute.mjs',
@@ -72,6 +76,10 @@ describe("Million", function () {
       let session, numberOfPartitions = 7, fanout = 2, answer = input * numberOfPartitions;
       beforeAll(async function () {
         session = await joinMillion({...sharedParameters, numberOfPartitions, fanout});
+        const promise = new Promise(resolve => ComputationWorker.oncomplete = resolve);
+        session.view.promiseOutput();
+        const view = await promise;
+        session = view.session;
       });
       afterAll(async function () {
         await session.leave();
@@ -85,10 +93,13 @@ describe("Million", function () {
         expect(session.model.interiorPartitions).toBeTruthy();
       });
       it('fills outputs.', async function () {
-        let outputs = await session.view.promiseComputation();
+        let outputs = await session.view.promiseComputation(),
+            completed = session.model.completed;
         expect(outputs.length).toBe(fanout);
         expect(outputs[0]).toBe(input * fanout * fanout);
         expect(outputs[1]).toBe(input * (fanout * fanout - 1)); // In this case
+        expect(completed.length).toBe(fanout);
+        expect(completed.every(element => element)).toBeTruthy();
       });
       it('computes correct answer.', async function () {
         expect(await session.view.promiseOutput()).toBe(answer);
@@ -168,7 +179,9 @@ describe("Million", function () {
         bots.kill();
       });
       it('computes answer.', async function () {
+        console.log('start');
         controller.view.setParameters({sessionAction: 'compute'});
+        console.log('parmeters set');
         await new Promise(resolve => observer.view.oncomplete = resolve);
         // Fragile. responder() knows when the lead bot arrives in player, but after commanding everyone to join
         // the computation, we don't actually know when they have all arrived. It is possible for the computation to
