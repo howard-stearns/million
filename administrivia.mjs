@@ -22,12 +22,13 @@ function step(time) { // Step all sessions in the same image at once. Makes debu
   requestAnimationFrame(step);
 };
 
+// Must be manual for NodeJS Croquet. This same code works in both.
+const stepType = (typeof(process) === 'undefined') ? 'auto' : 'manual';
+
 export async function join(parameters) {
   const session = await Croquet.Session.join({
 
-    // We'll have to see how this works out. For example, Croquet in a browser might integrate
-    // stepping with the browsers visiblityState, and we would want to make use of that.
-    step: "manual", // Must be manual for NodeJS Croquet. This same code works in both.
+    step: stepType, 
 
     ...administrivia,
     ...parameters,

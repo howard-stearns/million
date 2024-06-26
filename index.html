@@ -26,12 +26,12 @@
     <img src="qr-million.png"></img>
 
     <script type="module">
-      import { joinMillion } from './demo-join.mjs';
       import { player } from './player.mjs';
+      import { joinMillion } from './demo-join.mjs';
       Croquet.App.root = false; // disable the joining overlay
       var computer = null;
       async function responder(parameters) { // Respond to player controller
-
+        console.log(parameters)
         function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
         ['fanout', 'numberOfPartitions', 'version'].forEach(update);
 
@@ -79,6 +79,8 @@
         }
       }
       const controller = window.controller = await player('controller3', {}, responder);
+      let {name, id, persistentId, versionId} = controller;
+      console.log({name, id, persistentId, versionId});
       compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
       function numberChanger(event) {
         controller.view.setParameters({

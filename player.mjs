@@ -40,6 +40,7 @@ class PlayerView extends Croquet.View { // Interface to the model.
     this.onchange = onchange;
     this.subscribe(this.sessionId, Q.PARAMETERS_SET, this.parametersSet);
     this.subscribe(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCountChanged);
+    this.viewCountChanged(model.viewCount);
   }
   setParameters(parameters) {
     this.publish(this.sessionId, 'setParameters', parameters);
@@ -48,7 +49,7 @@ class PlayerView extends Croquet.View { // Interface to the model.
     setTimeout(() => this.onchange?.(parameters));
   }
   viewCountChanged(viewCount) {
-    setTimeout(() => this.onchange?.({sessionAction: 'viewCountChanged', ...this.model.parameters, viewCount}));
+    this.onchange?.({sessionAction: 'viewCountChanged', viewCount});
   }
 }
 

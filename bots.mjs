@@ -4,14 +4,15 @@
 
 import cluster from 'node:cluster';
 import { argv } from 'node:process';
+import { delay } from './utilities.mjs';
 import { player } from './player.mjs';
 import { joinMillion } from './demo-join.mjs';
-import { delay } from './utilities.mjs';
 
 const sessionName = argv[2],
       nBots = argv[3] || 100;
 var session;
 process.on('message', async ({method, parameters}) => {
+  console.log({method, parameters});
   switch (method) {
   case 'leave':
     let leaving = session;
@@ -29,6 +30,8 @@ process.on('message', async ({method, parameters}) => {
   case 'compute':
     await session.view.promiseOutput();
     break;
+  case 'viewCountChanged':
+    break;
   default:
       console.warn(`Unrecognized method ${method}.`);
   }
@@ -43,6 +46,8 @@ if (cluster.isPrimary) {
   }
   const bots = Array.from({length: nBots - 1}, () => cluster.fork()),
         controller = await player(sessionName, {}, control);
+  let {name, id, persistentId, versionId} = controller;
+  console.log({name, id, persistentId, versionId});
   console.log(`bot lead joined ${sessionName} with ${controller.model.viewCount} present.`);
   bots.push({process, send: message => process.emit('message', message)}); // Us, too.
 }
