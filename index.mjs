@@ -51,11 +51,6 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
     this.subscribe(this.sessionId, 'setOutput', this.setOutput);
     this.subscribe(this.sessionId, 'startNextPartition', this.startNextPartition);
     this.subscribe(this.sessionId, 'endPartition', this.endPartition);
-
-    this.subscribe(this.sessionId, 'view-join', this.viewJoin);
-  }
-  viewJoin(viewId) {
-    //console.log('*** join', this.originalOptions.sessionName, this.sessionId);
   }
 
   setInputs([requestId, inputs]) { // Set Inputs and tell everyone of the update.
@@ -103,7 +98,6 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
     this.future(50).startNextPartition(viewId); // Next tick to see if others finish before telling view to do more work. Easier debugging.
   }
   viewExit(viewId) { // Remove the partipant from the list of workers inProgress so that someone else will pick it up.
-    //console.log('*** exit', this.originalOptions.sessionName, this.sessionId);
     for (let index = 0; index < this.inProgress.length; index++) {
       if (this.removeWorker(viewId, index)) return;
     }
@@ -192,7 +186,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     this.publish(this.sessionId, 'startNextPartition', viewId);
     let index = await this.nextPartition;
     while (index >= 0) {
-      const start = this.trace('start ' + label, null, index),
+      const start = this.trace('start ' + label, null, index, this.model),
             input = this.model.inputs[index],
             output = (label === 'computing') ? await this.compute1(input, index) : await this.coordinateNextLevel(input, index);
       this.trace('finished ' + label, start, index, output);

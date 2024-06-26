@@ -1,5 +1,4 @@
-export function log(sessionName, viewId, label, ...data) { // Called from the machinery. Can be no-op, or report to somewhere.
-  console.log(sessionName, viewId, label, ...data);
+export function log(spacing, sessionName, viewId, label, ...data) { // Called from the machinery. Can be no-op, or report to somewhere.
   const sessionElement = document.getElementById(sessionName),
         activity = sessionElement?.querySelector('activity'),
         dist = sessionElement?.querySelector('distribution');
@@ -21,7 +20,6 @@ export function log(sessionName, viewId, label, ...data) { // Called from the ma
   if (label.startsWith('start co')) {
     dist.textContent = data[1].inProgress.map(part => part.size);
     label += ' ' + data[0];
-    console.log('LABEL:', label, data);
   } else if (label === 'collected output') {
     dist.textContent = '';
     activity.classList.add('completed');
