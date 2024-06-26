@@ -78,7 +78,7 @@
           console.warn(`Unrecognized sessionAction '${parameters.sessionAction}'.`);
         }
       }
-      const controller = window.controller = await player('controller3', {}, responder);
+      const controller = window.controller = await player('controller4', {}, responder);
       let {name, id, persistentId, versionId} = controller;
       console.log({name, id, persistentId, versionId});
       compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
