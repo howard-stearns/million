@@ -65,10 +65,10 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
   // There are three state properties associated with the calculation of partition results:
   // - outputs is an array of the result of each corresponding partition
   // - complete is array of which elements are complete
-  // - inProgress is an array of which each element is a list of the viewId of the workers currently computing that partition's result.
+  // - inProgress is an array of which each element is a Set of the viewId of the workers currently computing that partition's result.
   //   It's ok to have multiple workers on a partition because they might drop out before their work is done.
   //   We keep track of the viewId so that we can remove that worker when we get view-exit event.
-  //   The length of the list in an element gives the number of current workers on that partition.
+  //   The size of the set for a partition gives the number of current workers on that partition.
   //   We put new workers into the first partition that has the least number of workers. 
   startNextPartition(viewId) { // Find the next partition index to work, update the accounting for that partition, and tell viewId the partition index.
     const {completed, inProgress} = this;
@@ -173,6 +173,10 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     if (output === SUSPENDED) return output; // We have detached, and so has what we were working on. Indicate so to callers.
     if (this.session) return output; // Normal flow
     // We have detached. Pick things up again.
+    // Not used yet. When we leave an upper session to do the work of a lower session, we can leave (the commented code above).
+    // This code, and the promiseUpward it calls, is how we get back into the upper session and continue working. I've tested
+    // this and it works, but 1) It makes a demo more confusing, so ... 2) I'd like to have it be switchable so that bots can
+    // use this and detach, but demoers/controllers can stay connected all the way up and down. I haven't done that part yet.
     const upsession = await joinMillion(this.model.originalOptions);
     upsession.view.promiseUpward(index, output); // Don't await. Just let it happen
     return SUSPENDED;

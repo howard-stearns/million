@@ -4,6 +4,8 @@ This is a Proof-of-Concept of Web infrastructure for running a parallel computat
 
 The number of nodes and all aspects of the computation are pluggable, and the computation is robust against nodes connecting and disconnecting at will.
 
+It works! I've run an earlier version of this with a few hundred bots on a million partitions (3 layers with 1000 fanout), all running in the same single image, with my own *non-networked* *test-harndess* version of Croquet. With the  1 second artificial delays turned off (and no network delays), it took about 7 minutes of pure overhead.
+
 ### Description
 
 - The computation itself is specified in modular parts:
@@ -27,13 +29,9 @@ As a PoC, there are a number of capabilities that are deferred for further work:
 ### Status
 Even as PoC, there things that need to be improved in order to fully demonstrate the concept:
 
-- A participant stays connected to all the ancestor computation nodes from where it working up. It should not need to, and indeed, we can't have thousands of participants staying connected to the root computation.
-- When told to stop, leave active session, not just the root.
-- Bots: more; show bot count on page.
+- A participant stays connected to all the ancestor computation nodes from where it working up. It should not need to, and indeed, we can't have thousands of participants staying connected to the root computation. This already works, but I want it to be optional so that some nodes can detach, while the demoer stays connected to all.
+- Bots! Works in my test suite, but I want to mix bots and browsers.
 
-- [ ] specify whether to use workSubproblem
-- [ ] auto step in browser
-- [ ] Use requestAnimationFrame in place of some setTimeouts
 
 
 
