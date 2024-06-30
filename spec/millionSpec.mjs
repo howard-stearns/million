@@ -94,7 +94,7 @@ describe("Million", function () {
       let session, numberOfPartitions = 7, fanout = 2, answer = input * numberOfPartitions;
       beforeAll(async function () {
         completedComputation = makeResolvablePromise();
-        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout}, {viewClass: Observer});
+        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout}, {viewClass: Observer, detachFromAncestors: true});
         session.view.promiseOutput();
         const view = await completedComputation;
         session = view.session;

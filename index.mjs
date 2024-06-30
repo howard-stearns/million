@@ -161,7 +161,9 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     return compute(input, index, this.model.artificialDelay);
   }
   async coordinateNextLevel(input, index) { // Promise the output of another session representing this partion to be further devided
-    //await this.session.leave(); // If we detach while coordinating next level, this is where.
+    if (this.viewOptions.detachFromAncestors) {
+      await this.session.leave();
+    }
     const { joinMillion } = await import(this.model.join),
           subName = `${this.model.sessionName}-${index}`, // The reproducible "address" of the next node down in this problem.
           subOptions = this.newOptions({ // Reduce the problem a bit.
@@ -178,7 +180,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     // This code, and the promiseUpward it calls, is how we get back into the upper session and continue working. I've tested
     // this and it works, but 1) It makes a demo more confusing, so ... 2) I'd like to have it be switchable so that bots can
     // use this and detach, but demoers/controllers can stay connected all the way up and down. I haven't done that part yet.
-    const upsession = await joinMillion(this.model.originalOptions);
+    const upsession = await joinMillion(this.model.originalOptions, this.viewOptions);
     upsession.view.promiseUpward(index, output); // Don't await. Just let it happen
     return SUSPENDED;
   }
@@ -214,7 +216,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     await this.setOutput(output);
     return output;
   }
-  async promiseUpward(index, output) {
+  async promiseUpward(index, output) { // Promise to enter output result and index and continue computaiton in ancestors. See comments at caller.
     await this.promiseLogger();    
     let start = this.trace('promiseUpward', null, index, output);
     this.setPartitionOutput(index, output);
@@ -222,11 +224,14 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     // If we get this far (promiseOutput returns), it is time to go up another level.
     this.trace('computed output for restarted parent', start, parentOutput);
     this.setOutput(parentOutput);
+    const grandparentOptions = this.model.parentOptions;
+    if (!grandparentOptions) {
+      return this.computationComplete(parentOutput);
+    }
     await this.session.leave();
-    const grandparentOptions = this.model.parentOptions,
-          { joinMillion } = await import(this.model.join),
+    const { joinMillion } = await import(this.model.join),
           parentIndex = parseInt(this.model.originalOptions.sessionName.slice(grandparentOptions.sessionName.length + 1)),
-          grandparent = await joinMillion(grandparentOptions);
+          grandparent = await joinMillion(grandparentOptions, this.viewOptions);
     grandparent.view.promiseUpward(parentIndex, parentOutput);
   }
   newOptions(parameters) {

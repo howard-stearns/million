@@ -68,6 +68,7 @@
               compute: './demo-compute.mjs',
               collectResults: './demo-collect.mjs'
             }, {
+              detachFromAncestors: false, // Easier to see what is going on.
               viewClass: Worker
             });
             computer.view.promiseOutput();

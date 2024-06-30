@@ -29,7 +29,6 @@ As a PoC, there are a number of capabilities that are deferred for further work:
 ### Status
 Even as PoC, there things that need to be improved in order to fully demonstrate the concept:
 
-- A participant stays connected to all the ancestor computation nodes from where it working up. It should not need to, and indeed, we can't have thousands of participants staying connected to the root computation. This already works, but I want it to be optional so that some nodes can detach, while the demoer stays connected to all.
 - Bots! Works in my test suite, but I want to mix bots and browsers.
 
 
