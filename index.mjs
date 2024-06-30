@@ -106,9 +106,10 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
 Computation.register(Computation.name);
 
 export class ComputationWorker extends Croquet.View { // Works on whatever part of the computation neeeds doing.
-  constructor(model) {
+  constructor(model, viewOptions) {
     super(model);
     this.model = model;
+    this.viewOptions = viewOptions;
     this.nextRequestId = 0;
     this.requests = {};
     this.subscribe(this.sessionId, 'modelConfirmation', this.modelConfirmation);
@@ -167,7 +168,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
             sessionName: subName,
             numberOfPartitions: this.model.interiorPartitions[index],
           }),
-          session = await joinMillion(subOptions),
+          session = await joinMillion(subOptions, this.viewOptions),
           output = await session.view.promiseOutput(); // Waits for the whole total of partition and it's partitions.
     await session.leave();
     if (output === SUSPENDED) return output; // We have detached, and so has what we were working on. Indicate so to callers.
@@ -235,9 +236,5 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   setPartitionOutput(index, output) {
     this.publish(this.sessionId, 'setPartitionOutput', {index, output});
   }
-  computationComplete(output) { // A hook for testing and demoing
-    setTimeout(() => this.oncomplete?.(this.model.output));
-    if (this.model.parentOptions) return;
-    this.constructor.oncomplete?.(this);
-  }
+  computationComplete(output) { } // Subclass to learn of this happening.
 }

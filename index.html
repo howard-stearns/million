@@ -27,9 +27,16 @@
 
     <script type="module">
       import { player, PlayerView } from './player.mjs';
-      import { joinMillion } from './demo-join.mjs';
+      import { joinMillion, ComputationWorker } from './demo-join.mjs';
       Croquet.App.root = false; // disable the joining overlay
       var computer = null;
+      class Worker extends ComputationWorker {
+        computationComplete(answer) { // Tell everyone (including bots) to leave.
+          if (this.model.parentOptions) return;
+          output.textContent = answer;
+          controller.view.setParameters({sessionAction: 'leave'});
+        }
+      }
       class ControllerView extends PlayerView {
         viewCountChanged(count) { // When this player plus the lead bot are present, we may begin.
           viewCount.textContent = count;
@@ -40,7 +47,7 @@
 
           switch (parameters.sessionAction || null) {
           case 'join':
-            compute.textContent = 'Stop';
+            compute.textContent = 'Wait';
             output.textContent = "...";
             if (computer) return;
             let topLI = document.querySelector('body > ul > li'),
@@ -60,10 +67,8 @@
               join: './demo-join.mjs',
               compute: './demo-compute.mjs',
               collectResults: './demo-collect.mjs'
-            });
-            computer.view.oncomplete = answer => setTimeout(() => {
-              output.textContent = answer;
-              this.parametersSet({sessionAction: 'leave'});
+            }, {
+              viewClass: Worker
             });
             computer.view.promiseOutput();
             break;

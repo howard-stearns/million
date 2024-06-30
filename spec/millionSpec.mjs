@@ -22,6 +22,13 @@ describe("Million", function () {
   afterAll(function () {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = timeout;
   });
+  let completedComputation;
+  class Observer extends ComputationWorker {
+    computationComplete(output) { // Resolve promise when we have the top-level answer.
+      if (this.model.parentOptions) return;
+      completedComputation.resolve(this);
+    }
+  }
   describe('player', function () {
     let session, promise = makeResolvablePromise(), viewCountPromise = makeResolvablePromise();
     class TestPlayer extends PlayerView {
@@ -86,10 +93,10 @@ describe("Million", function () {
     describe('three-level basic behavior', function () {
       let session, numberOfPartitions = 7, fanout = 2, answer = input * numberOfPartitions;
       beforeAll(async function () {
-        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout});
-        const promise = new Promise(resolve => ComputationWorker.oncomplete = resolve);
+        completedComputation = makeResolvablePromise();
+        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout}, {viewClass: Observer});
         session.view.promiseOutput();
-        const view = await promise;
+        const view = await completedComputation;
         session = view.session;
       });
       afterAll(async function () {
@@ -154,7 +161,7 @@ describe("Million", function () {
     }
     describe('controlled by player', function () {
       let controller, observer, bots,
-          promise = makeResolvablePromise(),
+          botsReady = makeResolvablePromise(),
           nBots = 16,
           numberOfPartitions = nBots,
           controllerName = 'botTestController' + forcer,
@@ -170,20 +177,21 @@ describe("Million", function () {
           };
       class BotController extends PlayerView {
         viewCountChanged(viewCount) { // When this player plus the lead bot are present, we may begin.
-          if (viewCount >= 2) promise.resolve();
+          if (viewCount >= 2) botsReady.resolve();
         }
       }
       beforeAll(async function () {
         let { execFile } = await import('node:child_process');
+        completedComputation = makeResolvablePromise(),
 
         controller = await player(controllerName, {}, BotController); // Parameters must match those for controller used by bots.
         //console.log(`controller joined ${controllerName}/${controller.id} with ${controller.model.viewCount} present.`);
-        observer = await joinMillion(parameters); // Does not promiseOutput.
+        observer = await joinMillion(parameters, {viewClass: Observer}); // Does not promiseOutput.
         bots = execFile('node', ['./bots.mjs', controllerName, nBots]);
         //bots.stdout.on('data', data => console.log(`bot out: ${data}`));
         bots.stderr.on('data', data => console.log(`bot err: ${data}`));
         expect(observer.model.output).toBeUndefined();
-        if (controller.model.viewCount < 2) { await promise; } // wait for lead bot
+        if (controller.model.viewCount < 2) { await botsReady; } // wait for lead bot
         //console.log(`Summoning bots to ${sessionName}`);
         controller.view.setParameters({sessionAction: 'join', ...parameters}); // But for testing, don't execute until all present.
         while (observer.model.viewCount < nBots) { // expect nBots + one observer
@@ -198,7 +206,7 @@ describe("Million", function () {
       });
       it('computes answer.', async function () {
         controller.view.setParameters({sessionAction: 'compute'});
-        await new Promise(resolve => observer.view.oncomplete = resolve);
+        await completedComputation;
         expect(observer.model.viewCount).toBeGreaterThan(Math.min(nBots, nBots));
         expect(observer.model.output).toBe(numberOfPartitions);
       });

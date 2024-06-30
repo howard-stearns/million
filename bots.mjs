@@ -30,7 +30,7 @@ process.on('message', async ({method, parameters}) => {
     //await session.view.promiseOutput();
     break;
   case 'compute':
-    await session.view.promiseOutput();
+    await session?.view.promiseOutput();
     break;
   case 'viewCountChanged':
     break;
