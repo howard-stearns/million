@@ -26,61 +26,60 @@
     <img src="qr-million.png"></img>
 
     <script type="module">
-      import { player } from './player.mjs';
+      import { player, PlayerView } from './player.mjs';
       import { joinMillion } from './demo-join.mjs';
       Croquet.App.root = false; // disable the joining overlay
       var computer = null;
-      async function responder(parameters) { // Respond to player controller
-        console.log(parameters)
-        function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
-        ['fanout', 'numberOfPartitions', 'version'].forEach(update);
+      class ControllerView extends PlayerView {
+        viewCountChanged(count) { // When this player plus the lead bot are present, we may begin.
+          viewCount.textContent = count;
+        }
+        async parametersSet(parameters) { // Respond to player controller
+          function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
+          ['fanout', 'numberOfPartitions', 'version'].forEach(update);
 
-        switch (parameters.sessionAction || null) {
-        case 'join':
-          compute.textContent = 'Stop';
-          output.textContent = "...";
-          if (computer) return;
-          let topLI = document.querySelector('body > ul > li'),
-              sessionName = "X" + parameters.version;
-          topLI.querySelector('ul').innerHTML = '';
-          topLI.querySelector('name').textContent = topLI.id = sessionName;
-          computer = window.computer = await joinMillion({ // window.computer to expose to console for debugging
-            sessionName,
-            input: 1,
-            artificialDelay: 1e3,
-            logger: './demo-logger.mjs',
+          switch (parameters.sessionAction || null) {
+          case 'join':
+            compute.textContent = 'Stop';
+            output.textContent = "...";
+            if (computer) return;
+            let topLI = document.querySelector('body > ul > li'),
+                sessionName = "X" + parameters.version;
+            topLI.querySelector('ul').innerHTML = '';
+            topLI.querySelector('name').textContent = topLI.id = sessionName;
+            computer = window.computer = await joinMillion({ // window.computer to expose to console for debugging
+              sessionName,
+              input: 1,
+              artificialDelay: 1e3,
+              logger: './demo-logger.mjs',
 
-            numberOfPartitions: parameters.numberOfPartitions,
-            fanout: parameters.fanout,
+              numberOfPartitions: parameters.numberOfPartitions,
+              fanout: parameters.fanout,
 
-            prepareInputs: './demo-prepare.mjs',
-            join: './demo-join.mjs',
-            compute: './demo-compute.mjs',
-            collectResults: './demo-collect.mjs'
-          });
-          computer.view.oncomplete = answer => setTimeout(() => {
-            output.textContent = answer;
-            responder({sessionAction: 'leave'});
-          });
-          computer.view.promiseOutput();
-          break;
-        case 'leave':
-          compute.textContent = 'Compute with the above parameters';
-          if (!computer) return;
-          await computer.leave();
-          computer = null;
-        case null:
-          break;
-        case 'viewCountChanged':
-          viewCount.textContent = parameters.viewCount;
-          break;
-        default:
-          console.warn(`Unrecognized sessionAction '${parameters.sessionAction}'.`);
+              prepareInputs: './demo-prepare.mjs',
+              join: './demo-join.mjs',
+              compute: './demo-compute.mjs',
+              collectResults: './demo-collect.mjs'
+            });
+            computer.view.oncomplete = answer => setTimeout(() => {
+              output.textContent = answer;
+              this.parametersSet({sessionAction: 'leave'});
+            });
+            computer.view.promiseOutput();
+            break;
+          case 'leave':
+            compute.textContent = 'Compute with the above parameters';
+            if (!computer) return;
+            await computer.leave();
+            computer = null;
+          case null:
+            break;
+          default:
+            console.warn(`Unrecognized sessionAction '${parameters.sessionAction}'.`);
+          }
         }
       }
-      const controller = window.controller = await player('controller5', {}, responder);
-      let {name, id, persistentId, versionId} = controller;
-      console.log({name, id, persistentId, versionId});
+      const controller = window.controller = await player('controller5', {}, ControllerView);
       compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
       function numberChanger(event) {
         controller.view.setParameters({

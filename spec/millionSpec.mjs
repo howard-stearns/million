@@ -1,5 +1,5 @@
 import { makeResolvablePromise, delay } from '../utilities.mjs';
-import { player } from '../player.mjs';
+import { player, PlayerView } from '../player.mjs';
 import { joinMillion } from '../demo-join.mjs';
 import { ComputationWorker } from '../index.mjs';
 
@@ -23,9 +23,17 @@ describe("Million", function () {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = timeout;
   });
   describe('player', function () {
-    let session, promise = makeResolvablePromise();
+    let session, promise = makeResolvablePromise(), viewCountPromise = makeResolvablePromise();
+    class TestPlayer extends PlayerView {
+      parametersSet(parameters) {
+        promise.resolve(parameters);
+      }
+      viewCountChanged(viewCount) {
+        viewCountPromise.resolve(viewCount);
+      }
+    }
     beforeAll(async function () {
-      session = await player('playerTest' + forcer, {}, parameters => promise.resolve(parameters));
+      session = await player('playerTest' + forcer, {}, TestPlayer);
     });
     afterAll(async function () {
       promise = makeResolvablePromise();
@@ -33,6 +41,9 @@ describe("Million", function () {
       let {test} = await promise;
       expect(test).toBe(null);
       await session.leave();
+    });
+    it('gets viewCount', async function () {
+      expect(await viewCountPromise).toBe(1);
     });
     it('gets updates.', async function () {
       session.view.setParameters({test: 3});
@@ -108,8 +119,8 @@ describe("Million", function () {
   });
   describe('player controls computation', function () {
     let session, promise = makeResolvablePromise();
-    beforeAll(async function () {
-      async function responder({go, input, numberOfPartitions, fanout}) {
+    class TestPlayerController extends PlayerView {
+      async parametersSet({go, input, numberOfPartitions, fanout}) {
         if (!go) return;
         const computer = await joinMillion({
           input, numberOfPartitions, fanout,
@@ -119,11 +130,13 @@ describe("Million", function () {
               answer = await computer.view.promiseOutput();
         promise.resolve(answer);
       }
+    }
+    beforeAll(async function () {
       session = await player('playerTest' + forcer, {
         input: 1,
         numberOfPartitions: 4,
         fanout: 4
-      }, responder);
+      }, TestPlayerController);
     });
     afterAll(async function () {
       await session.leave();
@@ -139,9 +152,9 @@ describe("Million", function () {
       it('launching bots', function () { pending('cannot launch bots from browser'); });
       return;
     }
-
     describe('controlled by player', function () {
       let controller, observer, bots,
+          promise = makeResolvablePromise(),
           nBots = 16,
           numberOfPartitions = nBots,
           controllerName = 'botTestController' + forcer,
@@ -155,39 +168,38 @@ describe("Million", function () {
             fanout: numberOfPartitions,
             numberOfPartitions
           };
+      class BotController extends PlayerView {
+        viewCountChanged(viewCount) { // When this player plus the lead bot are present, we may begin.
+          if (viewCount >= 2) promise.resolve();
+        }
+      }
       beforeAll(async function () {
-        let promise = makeResolvablePromise();
         let { execFile } = await import('node:child_process');
 
-        function responder({viewCount = 0}) { if (viewCount >= 2) promise.resolve(); } // This player plus the lead bot = 2.
-        controller = await player(controllerName, {}, responder); // Parameters must match those for controller used by bots.
+        controller = await player(controllerName, {}, BotController); // Parameters must match those for controller used by bots.
+        //console.log(`controller joined ${controllerName}/${controller.id} with ${controller.model.viewCount} present.`);
         observer = await joinMillion(parameters); // Does not promiseOutput.
         bots = execFile('node', ['./bots.mjs', controllerName, nBots]);
         //bots.stdout.on('data', data => console.log(`bot out: ${data}`));
         bots.stderr.on('data', data => console.log(`bot err: ${data}`));
         expect(observer.model.output).toBeUndefined();
-        console.log(`controller joined ${controllerName} with ${controller.model.viewCount} present.`);
-        await promise; // bot lead has joined controller
+        if (controller.model.viewCount < 2) { await promise; } // wait for lead bot
+        //console.log(`Summoning bots to ${sessionName}`);
         controller.view.setParameters({sessionAction: 'join', ...parameters}); // But for testing, don't execute until all present.
         while (observer.model.viewCount < nBots) { // expect nBots + one observer
           console.log(`${sessionName} viewCount: ${observer.model.viewCount}`);
           await delay(1e3);
         }
+        console.log(`Testing with ${observer.model.viewCount - 1} bots.`);
       });
       afterAll(async function () {
         await controller.leave();
         bots.kill();
       });
       it('computes answer.', async function () {
-        console.log('start');
         controller.view.setParameters({sessionAction: 'compute'});
-        console.log('parmeters set');
         await new Promise(resolve => observer.view.oncomplete = resolve);
-        // Fragile. responder() knows when the lead bot arrives in player, but after commanding everyone to join
-        // the computation, we don't actually know when they have all arrived. It is possible for the computation to
-        // complete before they all finish joining.
-        console.log(`Number of participants: ${observer.model.viewCount}.`);
-        expect(observer.model.viewCount).toBeGreaterThan(Math.min(nBots, 20));
+        expect(observer.model.viewCount).toBeGreaterThan(Math.min(nBots, nBots));
         expect(observer.model.output).toBe(numberOfPartitions);
       });
     });

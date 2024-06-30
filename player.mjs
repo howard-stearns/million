@@ -3,7 +3,8 @@ import { Croquet, join } from './administrivia.mjs';
 // A "Player" can be a browser or the leader of some bots.
 // Each player joins the "player" session and has a replicated model of the current parameters,
 // can change parameters with session.view.setParameters(),
-// and gets notified by onchange when the parameters change.
+// and will have PlayerView.parametersSet or viewCountChanged when things change.
+// PlayerView can be subclassed for different behavior.
 
 const Q = Croquet.Constants;
 Q.VIEW_JOIN = 'view-join';
@@ -33,11 +34,10 @@ class PlayerModel extends Croquet.Model { // Keeps track of the model.
 }
 PlayerModel.register(PlayerModel.name);
 
-class PlayerView extends Croquet.View { // Interface to the model.
-  constructor(model, {onchange}) {
+export class PlayerView extends Croquet.View { // Interface to the model.
+  constructor(model) {
     super(model);
     this.model = model;
-    this.onchange = onchange;
     this.subscribe(this.sessionId, Q.PARAMETERS_SET, this.parametersSet);
     this.subscribe(this.sessionId, Q.VIEW_COUNT_CHANGED, this.viewCountChanged);
     this.viewCountChanged(model.viewCount);
@@ -46,19 +46,18 @@ class PlayerView extends Croquet.View { // Interface to the model.
     this.publish(this.sessionId, 'setParameters', parameters);
   }
   parametersSet(parameters) {
-    setTimeout(() => this.onchange?.(parameters));
+    // Subclass to extend behavior.
   }
   viewCountChanged(viewCount) {
-    this.onchange?.({sessionAction: 'viewCountChanged', viewCount});
+    // Subclass to extend behavior.
   }
 }
 
-export function player(sessionName, initialParameters, onchange = console.log) {
+export function player(sessionName, initialParameters = {}, ViewClass = PlayerView) {
   return join({
     name: sessionName, // NOT drawn from initialParameters, because that controls other activity.
     model: PlayerModel,
-    view: PlayerView,
-    options: initialParameters,
-    viewOptions: {onchange}
+    view: ViewClass,
+    options: initialParameters
   });
 }
