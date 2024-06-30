@@ -41,37 +41,24 @@
         viewCountChanged(count) { // When this player plus the lead bot are present, we may begin.
           viewCount.textContent = count;
         }
-        async parametersSet(parameters) { // Respond to player controller
+        async parametersSet({sessionAction = null, ...parameters}) { // Respond to player controller
           function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
           ['fanout', 'numberOfPartitions', 'version'].forEach(update);
 
-          switch (parameters.sessionAction || null) {
-          case 'join':
+          switch (sessionAction) {
+          case 'joinAndCompute':
             compute.textContent = 'Wait';
             output.textContent = "...";
             if (computer) return;
-            let topLI = document.querySelector('body > ul > li'),
-                sessionName = "X" + parameters.version;
+            let topLI = document.querySelector('body > ul > li');
             topLI.querySelector('ul').innerHTML = '';
-            topLI.querySelector('name').textContent = topLI.id = sessionName;
-            computer = window.computer = await joinMillion({ // window.computer to expose to console for debugging
-              sessionName,
-              input: 1,
-              artificialDelay: 1e3,
+            topLI.querySelector('name').textContent = topLI.id = parameters.sessionName;
+            computer = window.computer = await joinMillion({...parameters}, {
               logger: './demo-logger.mjs',
-
-              numberOfPartitions: parameters.numberOfPartitions,
-              fanout: parameters.fanout,
-
-              prepareInputs: './demo-prepare.mjs',
-              join: './demo-join.mjs',
-              compute: './demo-compute.mjs',
-              collectResults: './demo-collect.mjs'
-            }, {
               detachFromAncestors: false, // Easier to see what is going on.
               viewClass: Worker
             });
-            computer.view.promiseOutput();
+            computer.view.promiseOutput(); // and compute
             break;
           case 'leave':
             compute.textContent = 'Compute with the above parameters';
@@ -81,16 +68,23 @@
           case null:
             break;
           default:
-            console.warn(`Unrecognized sessionAction '${parameters.sessionAction}'.`);
+            console.warn(`Unrecognized sessionAction '${sessionAction}'.`);
           }
         }
       }
-      const controller = window.controller = await player('controller5', {}, ControllerView);
-      compute.onclick = () => controller.view.setParameters({sessionAction: computer ? 'leave' : 'join'});
+      const controller = window.controller = await player('controller9', {}, ControllerView);
+      console.log(`Joined ${controller.name}/${controller.id} with ${controller.model.viewCount} present.`);
+      compute.onclick = () => {
+        controller.view.setParameters({
+          sessionAction: computer ? 'leave' : 'joinAndCompute',
+          sessionName: controller.model.parameters.prefix + controller.model.parameters.version
+        });
+      };
       function numberChanger(event) {
         controller.view.setParameters({
+          ...controller.model.parameters,
           [event.target.id]: parseInt(event.target.value),
-          sessionAction: 'leave'
+          sessionAction: null
         });
       }
       function current(name, ultimateDefault) { return controller.model.parameters[name] || parseInt(document.getElementById(name).value || ultimateDefault); }
@@ -99,7 +93,18 @@
         controller.view.setParameters({
           numberOfPartitions: current('numberOfPartitions', '4'),
           fanout: current('fanout', '4'),
-          version: current('version', '1')
+          version: current('version', '1'),
+          prefix: "W",
+
+          input: 1,
+          artificialDelay: 1e3,
+
+          prepareInputs: './demo-prepare.mjs',
+          join: './demo-join.mjs',
+          compute: './demo-compute.mjs',
+          collectResults: './demo-collect.mjs',
+
+          sessionAction: null
         });
       }
     </script>

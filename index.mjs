@@ -141,7 +141,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     this.logger?.(leadSpace, name, this.viewId + (this.session ? '' : '-DEAD'), label, ...data, (startTime ? now - startTime : ''));
     return now;
   }
-  async promiseLogger() { this.logger ||= this.model.logger && (await import(this.model.logger)).log; }
+  async promiseLogger() { this.logger ||= this.viewOptions.logger && (await import(this.viewOptions.logger)).log; }
 
   async promiseInputs() { // Answer a promise to ensure that this.model.inputs is assigned with the inputs for each partition.
     await this.promiseLogger(); // Before checking model values, as it needs to happen in each participant.

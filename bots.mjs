@@ -11,7 +11,7 @@ import { joinMillion } from './demo-join.mjs';
 const sessionName = argv[2],
       nBots = argv[3] || 100;
 var session, index;
-process.on('message', async ({method, parameters}) => {
+process.on('message', async ({method, parameters}) => { // JSON-RPC-ish
   switch (method) {
   case 'index':
     index = parameters.index;
@@ -21,16 +21,17 @@ process.on('message', async ({method, parameters}) => {
     session = null;
     leaving?.leave();
     break;
-  case 'join':
+  case 'joinOnly':
     await session?.leave();
-    console.log(`bot ${index} joining.`);
     session = await joinMillion(parameters);
     console.log(`bot ${index} joined ${parameters.sessionName} with ${session.model.viewCount} present.`);
-    // There's probably no reason to not start computing, but for testing/debugging, we'll start computing on a separate command.
-    //await session.view.promiseOutput();
     break;
   case 'compute':
     await session?.view.promiseOutput();
+    break;
+  case 'joinAndCompute':
+    session = await joinMillion(parameters);
+    await session.view.promiseOutput();
     break;
   case 'viewCountChanged':
     break;
@@ -40,10 +41,10 @@ process.on('message', async ({method, parameters}) => {
 });
 if (cluster.isPrimary) {
   class BotController extends PlayerView {
-    async parametersSet({sessionAction, ...parameters}) {
+    async parametersSet({sessionAction, ...options}) {
       if (!sessionAction) return;
       for (let bot of bots) {
-        bot.send({method: sessionAction, parameters});
+        bot.send({method: sessionAction, parameters: options});
         //await delay(1e3);
       };
     }

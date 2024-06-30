@@ -10,11 +10,15 @@ describe("Million", function () {
         timeout = jasmine.DEFAULT_TIMEOUT_INTERVAL,
         testParameters = {
           artificialDelay: 0, // ms
-          //logger: './console-logger.mjs',
           prepareInputs: './demo-prepare.mjs',
           join: './demo-join.mjs',
           compute: './demo-compute.mjs',
           collectResults: './demo-collect.mjs'
+        },
+        testViewParameters = {
+          viewClass: ComputationWorker,
+          //logger: './console-logger.mjs',
+          detachFromAncestors: true
         };
   beforeAll(function () {
     jasmine.DEFAULT_TIMEOUT_INTERVAL = 45e3;
@@ -68,7 +72,7 @@ describe("Million", function () {
     describe('single-level basic behavior', function () {
       let session, numberOfPartitions = 7, answer = input * numberOfPartitions; // In this case.
       beforeAll(async function () {
-        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout: answer});
+        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout: answer}, testViewParameters);
       });
       afterAll(async function () {
         await session.leave();
@@ -94,7 +98,7 @@ describe("Million", function () {
       let session, numberOfPartitions = 7, fanout = 2, answer = input * numberOfPartitions;
       beforeAll(async function () {
         completedComputation = makeResolvablePromise();
-        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout}, {viewClass: Observer, detachFromAncestors: true});
+        session = await joinMillion({...sharedParameters, numberOfPartitions, fanout}, {...testViewParameters, viewClass: Observer});
         session.view.promiseOutput();
         const view = await completedComputation;
         session = view.session;
@@ -127,13 +131,13 @@ describe("Million", function () {
   describe('player controls computation', function () {
     let session, promise = makeResolvablePromise();
     class TestPlayerController extends PlayerView {
-      async parametersSet({go, input, numberOfPartitions, fanout}) {
+      async parametersSet({go, input, numberOfPartitions, fanout}) { // Deliverately not exactly the protocol of demo, as a unit test.
         if (!go) return;
         const computer = await joinMillion({
           input, numberOfPartitions, fanout,
           sessionName: 'millionTest' + forcer,
           ...testParameters
-        }),
+        }, testViewParameters),
               answer = await computer.view.promiseOutput();
         promise.resolve(answer);
       }
@@ -170,7 +174,6 @@ describe("Million", function () {
             ...testParameters,
             sessionName: sessionName,
             input: 1,            
-            //logger: './console-logger.mjs',
             artificialDelay: 1e3, // ms
             fanout: numberOfPartitions,
             numberOfPartitions
@@ -186,14 +189,14 @@ describe("Million", function () {
 
         controller = await player(controllerName, {}, BotController); // Parameters must match those for controller used by bots.
         //console.log(`controller joined ${controllerName}/${controller.id} with ${controller.model.viewCount} present.`);
-        observer = await joinMillion(parameters, {viewClass: Observer}); // Does not promiseOutput.
+        observer = await joinMillion(parameters, {...testViewParameters, viewClass: Observer}); // Does not promiseOutput.
         bots = execFile('node', ['./bots.mjs', controllerName, nBots]);
         //bots.stdout.on('data', data => console.log(`bot out: ${data}`));
         bots.stderr.on('data', data => console.log(`bot err: ${data}`));
         expect(observer.model.output).toBeUndefined();
         if (controller.model.viewCount < 2) { await botsReady; } // wait for lead bot
         //console.log(`Summoning bots to ${sessionName}`);
-        controller.view.setParameters({sessionAction: 'join', ...parameters}); // But for testing, don't execute until all present.
+        controller.view.setParameters({sessionAction: 'joinOnly', ...parameters}); // But for testing, don't execute until all present.
         while (observer.model.viewCount < nBots) { // expect nBots + one observer
           console.log(`${sessionName} viewCount: ${observer.model.viewCount}`);
           await delay(1e3);
