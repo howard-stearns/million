@@ -166,7 +166,9 @@ describe("Million", function () {
     describe('controlled by player', function () {
       let controller, observer, bots,
           botsReady = makeResolvablePromise(),
-          nBots = 16,
+          nGroups = 10,
+          nBotsPerGroup = 10,
+          nBots = nGroups * nBotsPerGroup,
           numberOfPartitions = nBots,
           controllerName = 'botTestController' + forcer,
           sessionName = 'botTestComputation' + forcer, 
@@ -190,7 +192,7 @@ describe("Million", function () {
         controller = await player(controllerName, {}, BotController); // Parameters must match those for controller used by bots.
         //console.log(`controller joined ${controllerName}/${controller.id} with ${controller.model.viewCount} present.`);
         observer = await joinMillion(parameters, {...testViewParameters, viewClass: Observer}); // Does not promiseOutput.
-        bots = execFile('node', ['./bots.mjs', controllerName, nBots]);
+        bots = execFile('node', ['./bots.mjs', controllerName, nGroups, nBotsPerGroup]);
         //bots.stdout.on('data', data => console.log(`bot out: ${data}`));
         bots.stderr.on('data', data => console.log(`bot err: ${data}`));
         expect(observer.model.output).toBeUndefined();
@@ -210,7 +212,7 @@ describe("Million", function () {
       it('computes answer.', async function () {
         controller.view.setParameters({sessionAction: 'compute'});
         await completedComputation;
-        expect(observer.model.viewCount).toBeGreaterThan(Math.min(nBots, nBots));
+        expect(observer.model.viewCount).toBeGreaterThan(nBots);
         expect(observer.model.output).toBe(numberOfPartitions);
       });
     });

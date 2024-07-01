@@ -2,7 +2,7 @@
 // Create a bunch of bots.
 // Connect to player session, and send all of them (and the primary worker) to the specified computation.
 
-const USE_CLUSTER = false;
+const USE_CLUSTER = true;
 var host, isHost, makeChild;
 if (USE_CLUSTER) {
   const cluster = await import('node:cluster');
@@ -29,29 +29,42 @@ import { player, PlayerView } from './player.mjs';
 import { joinMillion } from './demo-join.mjs';
 
 const sessionName = argv[2],
-      nBots = argv[3] || 100;
-var session, index;
+      nGroups = argv[3] || 16,
+      nBotsPerGroup = argv[4] || 1;
+
+var sessions = [], index;
+function leaveSessions() {
+  sessions.forEach(session => session.leave());
+  sessions = [];
+}
+function joinSessions(parameters) {
+  return Array.from({length: nBotsPerGroup}, () => joinMillion(parameters));
+}
+function computeSessions() {
+  return sessions.map(session => session.view?.promiseOutput());
+}
+
 async function handler({method, parameters}) { // JSON-RPC-ish
   switch (method) {
   case 'index':
     index = parameters.index;
     break;
   case 'leave':
-    let leaving = session;
-    session = null;
-    leaving?.leave();
+    leaveSessions();
     break;
   case 'joinOnly':
-    await session?.leave();
-    session = await joinMillion(parameters);
-    console.log(`bot ${index} joined ${parameters.sessionName} with ${session.model.viewCount} present.`);
+    leaveSessions();
+    sessions = await Promise.all(joinSessions(parameters));
+    console.log(`bot ${index} joined ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);
     break;
   case 'compute':
-    await session?.view.promiseOutput();
+    computeSessions();
     break;
   case 'joinAndCompute':
-    session = await joinMillion(parameters);
-    await session.view.promiseOutput();
+    leaveSessions();
+    sessions = await Promise.all(joinSessions(parameters));
+    console.log(`Computing bot ${index} in ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);    
+    computeSessions();
     break;
   case 'viewCountChanged':
     break;
@@ -70,7 +83,7 @@ if (isHost) {
       };
     }
   }
-  const bots = Array.from({length: nBots - 1}, makeChild),
+  const bots = Array.from({length: nGroups - 1}, makeChild),
         controller = await player(sessionName, {}, BotController);
   console.log(`bot lead joined ${sessionName}/${controller.id} with ${controller.model.viewCount} present.`);
   // Create an object for the primary process, with a send method like the child process have, and add to bots.
