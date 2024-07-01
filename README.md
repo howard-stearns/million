@@ -6,6 +6,8 @@ The number of nodes and all aspects of the computation are pluggable, and the co
 
 It works! I've run an earlier version of this with a few hundred bots on a million partitions (3 layers with 1000 fanout), all running in the same single image, with my own *non-networked* *test-harndess* version of Croquet. With the  1 second artificial delays turned off (and no network delays), it took about 7 minutes of pure overhead.
 
+See [demo](https://howard-stearns.github.io/million/).
+
 ### Description
 
 - The computation itself is specified in modular parts:
