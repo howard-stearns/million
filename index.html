@@ -16,7 +16,7 @@
     <br/>
     <label style="color: grey">version counter <input style="color: grey" id="version" type="number"></input> <button  style="color: grey" onclick="version.value = parseInt(version.value)+1; version.onchange({target:version})">increment</button></label>
     <br/>
-    <button id="compute">Compute with the above parameters</button>
+    <button id="compute"></button>
     <label>answer: <span id="output">...</span></label>
     <br/>
     <label>people <span id="viewCount">1</span></label> <a href="https://github.com/howard-stearns/million">source code</a>
@@ -29,12 +29,15 @@
       import { player, PlayerView } from './player.mjs';
       import { joinMillion, ComputationWorker } from './demo-join.mjs';
       Croquet.App.root = false; // disable the joining overlay
+      function updateComputeButton(active) { compute.textContent = active ? 'Compute with the above parameters' : 'Wait'; }
+      updateComputeButton(true);
       var computer = null;
       class Worker extends ComputationWorker {
-        computationComplete(answer) { // Tell everyone (including bots) to leave.
-          if (this.model.parentOptions) return;
+        async computationComplete(answer) { // Event occurs as soon as ANYONE has the answer. Even if we are still working.
+          if (this.model.parentOptions) return; // Coordinator finished, but it is not the final answer.
           output.textContent = answer;
-          controller.view.setParameters({sessionAction: 'leave'});
+          // leave, but don't do so within our own step().
+          setTimeout(() => controller.view.parametersSet({sessionAction: 'leave'}));
         }
       }
       class ControllerView extends PlayerView {
@@ -42,12 +45,13 @@
           viewCount.textContent = count;
         }
         async parametersSet({sessionAction = null, ...parameters}) { // Respond to player controller
+          console.log(`Received command '${sessionAction}'.`);
           function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
           ['fanout', 'numberOfPartitions', 'version'].forEach(update);
 
           switch (sessionAction) {
           case 'joinAndCompute':
-            compute.textContent = 'Wait';
+            updateComputeButton(false);
             output.textContent = "...";
             if (computer) return;
             let topLI = document.querySelector('body > ul > li');
@@ -58,10 +62,10 @@
               detachFromAncestors: false, // Easier to see what is going on.
               viewClass: Worker
             });
-            computer.view.promiseOutput(); // and compute
+            await computer.view.promiseOutput(); // and compute
             break;
           case 'leave':
-            compute.textContent = 'Compute with the above parameters';
+            updateComputeButton(true);
             if (!computer) return;
             await computer.leave();
             computer = null;

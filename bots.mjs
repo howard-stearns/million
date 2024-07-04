@@ -26,7 +26,7 @@ if (USE_CLUSTER) {
 import { argv } from 'node:process';
 import { delay } from './utilities.mjs';
 import { player, PlayerView } from './player.mjs';
-import { joinMillion } from './demo-join.mjs';
+import { joinMillion, ComputationWorker } from './demo-join.mjs';
 
 const sessionName = argv[2],
       nGroups = argv[3] || 16,
@@ -34,17 +34,25 @@ const sessionName = argv[2],
 
 var sessions = [], index;
 function leaveSessions() {
+  console.log(`Bot ${index} leaving ${sessions.length} sessions.`);
   sessions.forEach(session => session.leave());
   sessions = [];
 }
 function joinSessions(parameters) {
-  return Array.from({length: nBotsPerGroup}, () => joinMillion(parameters));
+  return Array.from({length: nBotsPerGroup}, () => joinMillion(parameters, {
+    viewClass: ComputationWorker,
+    logger: './console-logger.mjs',
+    detachFromAncestors: false
+  }));
 }
 function computeSessions() {
-  return sessions.map(session => session.view?.promiseOutput());
+  return sessions.map((session, index) => {
+    return session.view?.promiseOutput();
+  });
 }
 
 async function handler({method, parameters}) { // JSON-RPC-ish
+  console.log(`Bot ${index} received command '${method}'.`);
   switch (method) {
   case 'index':
     index = parameters.index;
@@ -55,7 +63,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish
   case 'joinOnly':
     leaveSessions();
     sessions = await Promise.all(joinSessions(parameters));
-    console.log(`bot ${index} joined ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);
+    console.log(`Bot ${index} joined ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);
     break;
   case 'compute':
     computeSessions();
@@ -64,7 +72,8 @@ async function handler({method, parameters}) { // JSON-RPC-ish
     leaveSessions();
     sessions = await Promise.all(joinSessions(parameters));
     console.log(`Computing bot ${index} in ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);    
-    computeSessions();
+    await Promise.all(computeSessions());
+    leaveSessions();
     break;
   case 'viewCountChanged':
     break;

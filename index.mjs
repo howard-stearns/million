@@ -162,7 +162,8 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   }
   async coordinateNextLevel(input, index) { // Promise the output of another session representing this partion to be further devided
     if (this.viewOptions.detachFromAncestors) {
-      await this.session.leave();
+      this.trace('*** coordinate', null, index, this.viewOptions);
+       await this.session?.leave();
     }
     const { joinMillion } = await import(this.model.join),
           subName = `${this.model.sessionName}-${index}`, // The reproducible "address" of the next node down in this problem.
@@ -176,10 +177,8 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     if (output === SUSPENDED) return output; // We have detached, and so has what we were working on. Indicate so to callers.
     if (this.session) return output; // Normal flow
     // We have detached. Pick things up again.
-    // Not used yet. When we leave an upper session to do the work of a lower session, we can leave (the commented code above).
-    // This code, and the promiseUpward it calls, is how we get back into the upper session and continue working. I've tested
-    // this and it works, but 1) It makes a demo more confusing, so ... 2) I'd like to have it be switchable so that bots can
-    // use this and detach, but demoers/controllers can stay connected all the way up and down. I haven't done that part yet.
+    // When we leave an upper session to do the work of a lower session,  this code, and the promiseUpward it calls, is how
+    // we get back into the upper session and continue working.
     const upsession = await joinMillion(this.model.originalOptions, this.viewOptions);
     upsession.view.promiseUpward(index, output); // Don't await. Just let it happen
     return SUSPENDED;

@@ -34,7 +34,7 @@ export async function join(parameters) {
     ...parameters,
   });
   sessions.push(session);
-  requestAnimationFrame(step);
+  if (stepType === 'manual') requestAnimationFrame(session.step);
   return session;
 }
 

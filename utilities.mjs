@@ -11,12 +11,13 @@ export function makeResolvablePromise() { // Return a promise with a 'resolve' p
 }
 
 export const performance = (typeof window !== 'undefined') ? window.performance : (await import('perf_hooks')).performance ;
-var requestAnimationFrame, pending = null;
-if (!requestAnimationFrame) {
-  requestAnimationFrame = handler => {
+
+// Ensure there is a definition of requestAnimationFrame -- even in NodeJS.
+var pending = null;
+export const requestAnimationFrame = (typeof(window) !== 'undefined') ? window.requestAnimationFrame :
+  function requestAnimationFrame(handler) {
     if (pending) return;
     let paint = _ => { pending = null; handler(performance.now()); };
     pending = setTimeout(paint, 16);
-  }
-}
-export { requestAnimationFrame };
+  };
+

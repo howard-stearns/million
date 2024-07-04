@@ -1,7 +1,6 @@
 import { makeResolvablePromise, delay } from '../utilities.mjs';
 import { player, PlayerView } from '../player.mjs';
-import { joinMillion } from '../demo-join.mjs';
-import { ComputationWorker } from '../index.mjs';
+import { joinMillion, ComputationWorker } from '../demo-join.mjs';
 
 jasmine.getEnv().configure({random: false});
 
