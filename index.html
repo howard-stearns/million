@@ -29,7 +29,10 @@
       import { player, PlayerView } from './player.mjs';
       import { joinMillion, ComputationWorker } from './demo-join.mjs';
       Croquet.App.root = false; // disable the joining overlay
-      function updateComputeButton(active) { compute.textContent = active ? 'Compute with the above parameters' : 'Wait'; }
+      function updateComputeButton(active) {
+        compute.textContent = active ? 'Compute with the above parameters' : 'Wait';
+        [compute, fanout, numberOfPartitions, version].forEach(element => element.disabled = !active);
+      }
       updateComputeButton(true);
       var computer = null;
       class Worker extends ComputationWorker {
@@ -57,7 +60,7 @@
             let topLI = document.querySelector('body > ul > li');
             topLI.querySelector('ul').innerHTML = '';
             topLI.querySelector('name').textContent = topLI.id = parameters.sessionName;
-            computer = window.computer = await joinMillion({...parameters}, {
+            computer = window.computer = await joinMillion(parameters, {
               logger: './demo-logger.mjs',
               detachFromAncestors: false, // Easier to see what is going on.
               viewClass: Worker
@@ -76,7 +79,7 @@
           }
         }
       }
-      const controller = window.controller = await player('controller9', {}, ControllerView);
+      const controller = window.controller = await player('controller10', {}, ControllerView);
       console.log(`Joined ${controller.name}/${controller.id} with ${controller.model.viewCount} present.`);
       compute.onclick = () => {
         controller.view.setParameters({
@@ -101,7 +104,7 @@
           prefix: "W",
 
           input: 1,
-          artificialDelay: 1e3,
+          artificialDelay: 0, //1e3,
 
           prepareInputs: './demo-prepare.mjs',
           join: './demo-join.mjs',

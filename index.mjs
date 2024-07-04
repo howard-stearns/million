@@ -115,6 +115,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     this.subscribe(this.sessionId, 'modelConfirmation', this.modelConfirmation);
     this.subscribe(this.viewId, 'partitionToWork', this.partitionToWork);
     this.subscribe(this.sessionId, 'computationComplete', this.computationComplete);
+    this.promiseLogger().then(_ => this.trace('Join'));
   }
 
   // We do not write directly to the Computation model. Instead, we publish an event that gets reflected back to all
@@ -162,8 +163,8 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   }
   async coordinateNextLevel(input, index) { // Promise the output of another session representing this partion to be further devided
     if (this.viewOptions.detachFromAncestors) {
-      this.trace('*** coordinate', null, index, this.viewOptions);
-       await this.session?.leave();
+      this.trace('leaving to coordinate child', null, index);
+      await this.session?.leave();
     }
     const { joinMillion } = await import(this.model.join),
           subName = `${this.model.sessionName}-${index}`, // The reproducible "address" of the next node down in this problem.
@@ -184,7 +185,6 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     return SUSPENDED;
   }
   async promiseComputation() { // Promise to work on the next available partition until all are complete.
-    await this.promiseLogger(); // Again, for when bots => inputs have already been produced.
     await this.promiseInputs();
     const viewId = this.viewId,
           label = this.model.interiorPartitions ? 'coordinating' : 'computing';
@@ -229,15 +229,18 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     }
     await this.session.leave();
     const { joinMillion } = await import(this.model.join),
-          parentIndex = parseInt(this.model.originalOptions.sessionName.slice(grandparentOptions.sessionName.length + 1)),
+          parentIndex = this.indexInParent(),
           grandparent = await joinMillion(grandparentOptions, this.viewOptions);
     grandparent.view.promiseUpward(parentIndex, parentOutput);
   }
-  newOptions(parameters) {
+  indexInParent() { // Answer this coordinating session's index within parent
+    return parseInt(this.model.originalOptions.sessionName.slice(this.model.parentOptions.sessionName.length + 1))
+  }
+  newOptions(parameters) { // Combine new parameters with original, and answer a set of options suitable for a coordinating child session.
     let {originalOptions} = this.model;
     return Object.assign({}, originalOptions, parameters, {parentOptions: originalOptions});
   }
-  setPartitionOutput(index, output) {
+  setPartitionOutput(index, output) { // Let everyone know about our answer.
     this.publish(this.sessionId, 'setPartitionOutput', {index, output});
   }
   computationComplete(output) { } // Subclass to learn of this happening.
