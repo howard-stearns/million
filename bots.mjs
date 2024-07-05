@@ -53,8 +53,9 @@ const controllerSessionName = argv[2],
 var sessions = [], index = '-';
 function leaveSessions() { // Leave all our group's sessions (all elements of sessions array).
   if (sessions.length) console.log(`Group ${index} leaving ${sessions.length} sessions.`);
-  sessions.forEach(session => session.leave());
+  let promises = sessions.map(session => session.leave());
   sessions = [];
+  return promises;
 }
 const viewOptions = { // Options peculiar to bots. Not part of model.
   viewClass: ComputationWorker,
@@ -73,7 +74,7 @@ function computeSessions() { // Compute all elements of sessions array.
     if (PRE_JOIN_NEXT_LEVEL) { // TODO? - Can this be incorporated into index.mjs?
       const parentOptions = session.model.parentOptions,
             indexInParent = session.view.indexInParent();
-      session.leave(); // Don't wait.
+      await session.leave();
       session = sessions[index] = await joinMillion(parentOptions, viewOptions);
       session.view.setPartitionOutput(indexInParent, output);
       session.view.promiseOutput(); // Don't wait
@@ -81,28 +82,6 @@ function computeSessions() { // Compute all elements of sessions array.
     return output;
   });
 }
-
-/* Session structures
-   x 1,000,000 "Million"
-     x-0 10,0000
-       x-0-0 100
-       x-0-1 100
-       ...
-       x-0-99 100
-     x-1
-     ...
-     x-99
-
-  x 10,000  "Ethereum"
-    x-0 100
-    x-1 100
-    ...
-    x-99 100
-
-  x 4
-    x-0 2
-    x-1 2
-*/
 
 function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
   let sessionName = parameters.prefix + version,
@@ -114,7 +93,8 @@ function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
         version
       }
   return Array.from({length: nBotsPerGroup},
-                    (_, subIndex) => {
+                    async (_, subIndex) => {
+                      await delay(100 * subIndex);
                       const partitionIndex = (index * nBotsPerGroup + subIndex) % fanout;
                       return joinMillion({
                         ...parentOptions,
@@ -141,7 +121,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
     leaveSessions();
     break;
   case 'joinOnly':
-    leaveSessions();
+    await Promise.all(leaveSessions());
     sessions = await Promise.all(joinSessions(parameters));
     console.log(`Group ${index} joined ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);
     break;
@@ -150,7 +130,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
     break;
   case 'joinAndCompute':
     if (!PRE_JOIN_NEXT_LEVEL) {
-      leaveSessions();
+      await Promise.all(leaveSessions());
       sessions = await Promise.all(joinSessions(parameters));
       console.log(`Computing bot ${index} in ${parameters.sessionName} ${nBotsPerGroup}x with ${sessions[0].model.viewCount} present.`);
     }
@@ -160,7 +140,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
   case 'viewCountChanged':
     break;
   case null:
-    leaveSessions();
+    await Promise.all(leaveSessions());
     if (PRE_JOIN_NEXT_LEVEL) {
       sessions = await Promise.all(prejoin(parameters));
     }
