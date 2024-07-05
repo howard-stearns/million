@@ -31,16 +31,7 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
       length = numberOfPartitions;
     } else {                            // We are an interior node, with at least one level below us.
       length = fanout;
-      const logBaseFanout = Math.log(numberOfPartitions) / Math.log(length),
-            cleanerLog = Math.round(10 * logBaseFanout) / 10, // logBaseFanout sometimes creeps above the integer, so round to nearest 10
-            remainingLevels = this.remainingLevels = Math.ceil(cleanerLog) - 1,
-            maxSubCapacity = Math.pow(length, remainingLevels),
-            parts = this.interiorPartitions = Array(length).fill(0); // If not filled, reduce won't iterate.
-      parts.reduce((previousTotal, _, index) => { // Fill parts with the number of partitions needed at each index.
-        let nextTotal = Math.min(previousTotal + maxSubCapacity, numberOfPartitions);
-        parts[index] = nextTotal - previousTotal;
-        return nextTotal;
-      }, 0);
+      this.partitionCapacity = this.constructor.partitionCapacity(numberOfPartitions, fanout);
     }
     this.outputs = Array(length);
     this.completed = Array(length).fill(false);
@@ -51,6 +42,16 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
     this.subscribe(this.sessionId, 'setOutput', this.setOutput);
     this.subscribe(this.sessionId, 'startNextPartition', this.startNextPartition);
     this.subscribe(this.sessionId, 'endPartition', this.endPartition);
+  }
+  static partitionCapacity(total, fanout) { // How many partitions can fit in each index.
+    const logBaseFanout = Math.log(total) / Math.log(fanout),
+          toNearest = 1000,
+          cleanerLog = Math.max(0.1, Math.round(toNearest * logBaseFanout) / toNearest), // logBaseFanout sometimes creeps above the integer, so round to nearest 10
+          levels = Math.ceil(cleanerLog) - 1;
+    return Math.pow(fanout, levels)
+  }
+  static numberAtIndex(total, partitionCapacity, index) { // How many sub partitions are in the indexth partition of the next level?
+    return Math.max(0, Math.min(partitionCapacity, total - (partitionCapacity * index)));
   }
 
   setInputs([requestId, inputs]) { // Set Inputs and tell everyone of the update.
@@ -170,7 +171,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
           subName = `${this.model.sessionName}-${index}`, // The reproducible "address" of the next node down in this problem.
           subOptions = this.newOptions({ // Reduce the problem a bit.
             sessionName: subName,
-            numberOfPartitions: this.model.interiorPartitions[index],
+            numberOfPartitions: this.model.constructor.numberAtIndex(this.model.numberOfPartitions, this.model.partitionCapacity, index),
           }),
           session = await joinMillion(subOptions, this.viewOptions),
           output = await session.view.promiseOutput(); // Waits for the whole total of partition and it's partitions.
@@ -187,7 +188,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
   async promiseComputation() { // Promise to work on the next available partition until all are complete.
     await this.promiseInputs();
     const viewId = this.viewId,
-          label = this.model.interiorPartitions ? 'coordinating' : 'computing';
+          label = this.model.partitionCapacity ? 'coordinating' : 'computing';
     this.nextPartition = makeResolvablePromise();
     this.publish(this.sessionId, 'startNextPartition', viewId);
     let index = await this.nextPartition;

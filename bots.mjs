@@ -13,8 +13,6 @@ const DETACH_FROM_ANCESTORS = true;
 //
 // TODO:
 // - Compute the prejoin numberOfPartitions properly when the total is either more or less than the capacity at this level.
-// - Make sure we're leaving appropriately (e.g., after computation).
-// - Make Web UI more robust for black-box use (i.e., not "golden path" demos) by leaving any pre-join when the numbers change again.
 // - Long term - can we support "idling" bots by moving the operating paramters outside the session options, and instead
 //   communicate them to members as the "currentOptions" (similarly to Player  -- and indeed, maybe get rid of Player)?
 const PRE_JOIN_NEXT_LEVEL = true;
@@ -46,7 +44,7 @@ if (USE_CLUSTER) {
 import { argv } from 'node:process';
 import { delay } from './utilities.mjs';
 import { player, PlayerView } from './player.mjs';
-import { joinMillion, ComputationWorker } from './demo-join.mjs';
+import { joinMillion, ComputationWorker, Computation } from './demo-join.mjs';
 
 const controllerSessionName = argv[2],
       nGroups = argv[3] || 16,
@@ -108,23 +106,28 @@ function computeSessions() { // Compute all elements of sessions array.
 
 function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
   let sessionName = parameters.prefix + version,
+      total = parameters.numberOfPartitions,
+      fanout = parameters.fanout,
       parentOptions = { // Match the order used by index.html
         ...parameters,
         sessionName,
         version
       }
   return Array.from({length: nBotsPerGroup},
-                    (_, subIndex) => joinMillion({
-                      ...parentOptions,
-                      numberOfPartitions: parameters.fanout, // FIXME
-                      sessionName: `${sessionName}-${index * nBotsPerGroup + subIndex}`,
-                      version,
-                      parentOptions
-                    }, {
-                      viewClass: ComputationWorker,
-                      logger: './console-logger.mjs',
-                      detachFromAncestors: true
-                    }));
+                    (_, subIndex) => {
+                      const partitionIndex = (index * nBotsPerGroup + subIndex) % fanout;
+                      return joinMillion({
+                        ...parentOptions,
+                        numberOfPartitions: Computation.numberAtIndex(total, Computation.partitionCapacity(total, fanout), partitionIndex),
+                        sessionName: `${sessionName}-${partitionIndex}`,
+                        version,
+                        parentOptions
+                      }, {
+                        viewClass: ComputationWorker,
+                        logger: './console-logger.mjs',
+                        detachFromAncestors: true
+                      });
+                    });
 }
 
 async function handler({method, parameters}) { // JSON-RPC-ish handler for communications from host to child processes/worker-threads.

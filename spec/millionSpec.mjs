@@ -1,6 +1,6 @@
 import { makeResolvablePromise, delay } from '../utilities.mjs';
 import { player, PlayerView } from '../player.mjs';
-import { joinMillion, ComputationWorker } from '../demo-join.mjs';
+import { joinMillion, ComputationWorker, Computation } from '../demo-join.mjs';
 
 jasmine.getEnv().configure({random: false});
 
@@ -61,7 +61,7 @@ describe("Million", function () {
       expect(test).toBe(3);
     });
   });
-  describe('single participant computation', function () {
+ describe('single participant computation', function () {
     const input = 2,
           sharedParameters = {
             sessionName: 'millionTest' + forcer,          
@@ -93,6 +93,14 @@ describe("Million", function () {
         expect(await session.view.promiseOutput()).toBe(answer);
       });
     });
+    describe('decomposition', function () {
+      it('rounds floating point log creep down, e.g, total 9 / fanout 3.', function () {
+        expect(Computation.partitionCapacity(9, 3)).toBe(3);
+      });
+      it('does not round too much log creep, e.g, total 17 / fanout 4.', function () {
+        expect(Computation.partitionCapacity(17, 4)).toBe(16);
+      });
+    });
     describe('three-level basic behavior', function () {
       let session, numberOfPartitions = 7, fanout = 2, answer = input * numberOfPartitions;
       beforeAll(async function () {
@@ -109,9 +117,6 @@ describe("Million", function () {
         let inputs = await session.view.promiseInputs();
         expect(inputs.length).toBefanout;
         expect(inputs.every(element => element === input)).toBeTruthy();
-      });
-      it('had interiorPartitions for a next level (in this case).', function () {
-        expect(session.model.interiorPartitions).toBeTruthy();
       });
       it('fills outputs.', async function () {
         let outputs = await session.view.promiseComputation(),

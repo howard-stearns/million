@@ -1,6 +1,6 @@
 import { Croquet, join } from './administrivia.mjs';
 import { Computation, ComputationWorker } from './index.mjs';
-export { ComputationWorker };
+export { Computation, ComputationWorker };
 
 export async function joinMillion(options = {}, viewOptions = {
   detachFromAncestors: true,  // When coordinating leaves, do not stay connected to ancestor coordinators.
