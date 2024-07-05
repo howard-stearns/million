@@ -21,3 +21,12 @@ export const requestAnimationFrame = (typeof(window) !== 'undefined') ? window.r
     pending = setTimeout(paint, 16);
   };
 
+// Takes a f(...args) => promise and returns a f(..args) that does so one a time.
+export function serializePromises(make1Promise) {
+  let last = Promise.resolve();
+  return function (...args) {
+    last = last.catch(_ => _).then(_ => make1Promise(...args));
+    return last;
+  }
+}
+

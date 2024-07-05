@@ -1,4 +1,4 @@
-import { Croquet, requestAnimationFrame } from './utilities.mjs';
+import { Croquet, requestAnimationFrame, serializePromises } from './utilities.mjs';
 export { Croquet };
 
 export const administrivia = {
@@ -25,7 +25,7 @@ function step(time) { // Step all sessions in the same image at once. Makes debu
 // Must be manual for NodeJS Croquet. This same code works in both.
 const stepType = (typeof(process) === 'undefined') ? 'auto' : 'manual';
 
-export async function join(parameters) {
+async function join1(parameters) {
   const session = await Croquet.Session.join({
 
     step: stepType, 
@@ -38,5 +38,9 @@ export async function join(parameters) {
   return session;
 }
 
-
+// When the same Javascript thread fires too many overlapping Croquet.Session.join request,
+// it can get connection timeouts (either at the reflector or at the api key validation).
+// Here we serialize them to occur one at time. That's helpful when there are several bots
+// in the same Javascript, and doesn't effect things otherwise.
+export const join = serializePromises(join1);
 
