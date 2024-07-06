@@ -1,5 +1,6 @@
-import { player, PlayerView, Croquet, join } from './player.mjs';
-
+//import { player, PlayerView, Croquet, join } from './player.mjs';
+import { PlayerModel, Croquet, join } from './player.mjs';
+PlayerModel.register('PlayerModel');
 class M extends Croquet.Model {}
 class V extends Croquet.View {}
 M.register(M.name)

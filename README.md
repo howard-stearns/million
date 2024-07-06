@@ -42,7 +42,8 @@ I can run 100 bots on my old Mac-Intel laptop. With these and a browser, I can d
   - the preparation of the 100 inputs,
   - each of the 100 individual "computations", and
   - the collection of the these 100 results into a combined answer.
-  Each of these is quite trivial in this demo, and is simulated by including a Javascript "wait" of a specified time. With only the 100 bots for all 10k partitions, I can keep to the time limit with a delay between 0 and 30 ms. E.g., for 30ms, a bot operating on one fold will be 30 + (100 * 30) + 30 = 360 ms of computation. The rest of the time the overhead of the machinery and the switching between tasks on the overloaded hardware.
+
+Each of these is quite trivial in this demo, and is simulated by including a Javascript "wait" of a specified time. With only the 100 bots for all 10k partitions, I can keep to the time limit with a delay between 0 and 30 ms. E.g., for 30ms, a bot operating on one fold will be 30 + (100 * 30) + 30 = 3060 ms of computation. The rest of the time the overhead of the machinery and the switching between tasks on the overloaded hardware.
 
 
 

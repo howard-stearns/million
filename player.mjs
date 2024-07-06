@@ -14,7 +14,7 @@ Q.SET_PARAMETERS = 'setParameters';
 Q.PARAMETERS_SET = 'parametersSet';
 Q.VIEW_COUNT_CHANGED = 'viewCountChanged';
 
-class PlayerModel extends Croquet.Model { // Keeps track of the model.
+export class PlayerModel extends Croquet.Model { // Keeps track of the model.
   init(parameters) {
     super.init();
     this.parameters = parameters;
@@ -33,8 +33,8 @@ class PlayerModel extends Croquet.Model { // Keeps track of the model.
     this.publish(this.sessionId, Q.PARAMETERS_SET, this.parameters);
   }
 }
-PlayerModel.register(PlayerModel.name);
-
+//PlayerModel.register(PlayerModel.name);
+/*
 export class PlayerView extends Croquet.View { // Interface to the model.
   constructor(model) {
     super(model);
@@ -62,3 +62,4 @@ export function player(sessionName, initialParameters = {}, ViewClass = PlayerVi
     options: initialParameters
   });
 }
+*/
