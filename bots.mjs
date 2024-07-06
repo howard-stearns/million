@@ -61,7 +61,7 @@ function leaveSessions() { // Leave all our group's sessions (all elements of se
 }
 const viewOptions = { // Options peculiar to bots. Not part of model.
   viewClass: ComputationWorker,
-  logger: './console-logger.mjs',
+  //logger: './console-logger.mjs',
   detachFromAncestors: DETACH_FROM_ANCESTORS
 };
 function joinSessions(parameters) { // Answer a list of promises for nBotsPerGroup sessions.
