@@ -76,7 +76,10 @@ function computeSessions() { // Compute all elements of sessions array.
       const parentOptions = session.model.parentOptions,
             indexInParent = session.view.indexInParent();
       let message = {method: 'finished', parameters: {indexInParent, output}};
+      // Having everyone rejoin the root session to report their results is expensive. (About 2 seconds per join.)
+      // Here we have leaft bot 0 attached to the root as an "observer", and we report our results through that.
       process.send?.(message) || handler(message);
+      // If we were rejoining....
       // await session.leave();
       // session = sessions[index] = await joinMillion(parentOptions, viewOptions);
       // session.view.setPartitionOutput(indexInParent, output);
@@ -115,13 +118,14 @@ function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
                     });
 }
 
+var start;
 async function handler({method, parameters}) { // JSON-RPC-ish handler for communications from host to child processes/worker-threads.
   // There are more options here than we use in any one configuration.
   //console.log(`Group ${index} received command '${method}'.`);
   switch (method) {
   case 'finished':
     let {indexInParent, output} = parameters;
-    console.log(`Leader learned that ${indexInParent} completed with ${output}, with ${--observerCountdown} remaining.`);
+    console.log(`Leader learned that ${indexInParent} completed in ${((Date.now() - start)/1e3).toFixed(1)} seconds, with ${--observerCountdown} remaining.`);
     observer.view.setPartitionOutput(indexInParent, output);
     if (!observerCountdown) observer.view.promiseOutput();
     break;
@@ -140,6 +144,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
     computeSessions();
     break;
   case 'joinAndCompute':
+    start = Date.now();
     if (!PRE_JOIN_NEXT_LEVEL) {
       await Promise.all(leaveSessions());
       sessions = await Promise.all(joinSessions(parameters));
@@ -153,6 +158,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
   case null:
     await Promise.all(leaveSessions());
     if (PRE_JOIN_NEXT_LEVEL) {
+      if (isHost) console.log(`Bot lead preparing bots... Please wait.`);
       sessions = await Promise.all(prejoin(parameters));
       console.log(`Bot group ${index} is ready with ${sessions.length} sessions.`);
     }

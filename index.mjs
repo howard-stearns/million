@@ -96,7 +96,7 @@ export class Computation extends Croquet.Model { // The abstract persistent stat
   endPartition({viewId, index, output}) { // Update the accounting for that partition and tell the viewId the next partition.
     this.removeWorker(viewId, index);
     this.setPartitionOutput({index, output});
-    this.future(50).startNextPartition(viewId); // Next tick to see if others finish before telling view to do more work. Easier debugging.
+    this.startNextPartition(viewId); // Next tick to see if others finish before telling view to do more work. Easier debugging.
   }
   viewExit(viewId) { // Remove the partipant from the list of workers inProgress so that someone else will pick it up.
     for (let index = 0; index < this.inProgress.length; index++) {
