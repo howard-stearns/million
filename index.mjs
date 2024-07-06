@@ -143,13 +143,20 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     this.logger?.(leadSpace, name, this.viewId + (this.session ? '' : '-DEAD'), label, ...data, (startTime ? now - startTime : ''));
     return now;
   }
-  async promiseLogger() { this.logger ||= this.viewOptions.logger && (await import(this.viewOptions.logger)).log; }
+  // Browser will cache these results, but bots might not.
+  async promiseLogger() { this.constructor.logger ||= this.viewOptions.logger && (await import(this.viewOptions.logger)).log; }
+  promiseCompute() { return this.constructor.compute ||= import(this.model.compute); }
+  promisePrepare() { return this.constructor.prepare ||= import(this.model.prepareInputs); }
+  promiseJoin() { return this.constructor.join ||= import(this.model.join); }
+  promiseCollect() { return this.constructor.collect ||= import(this.model.collectResults); }
+  promiseCode() { return Promise.all([this.promiseLogger(), this.promiseJoin(), this.promisePrepare(), this.promiseCompute(), this.promiseCollect()]); }
+  
 
   async promiseInputs() { // Answer a promise to ensure that this.model.inputs is assigned with the inputs for each partition.
     await this.promiseLogger(); // Before checking model values, as it needs to happen in each participant.
     if (this.model.inputs) return this.model.inputs;
     const start = this.trace('preparing inputs'),
-          { prepareInputs } = await import(this.model.prepareInputs),
+          { prepareInputs } = await this.promisePrepare(),
           inputs = await prepareInputs(this.model.input, this.model.outputs.length, this.model.arificialDelay); // outputs is the adjusted length for this node.
     this.trace('prepared inputs', start, inputs.length);
     await this.setInputs(inputs);
@@ -159,7 +166,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
     this.nextPartition?.resolve(index);
   }
   async compute1(input, index) { // Promise the output of the computation of just one partition.
-    const { compute } = await import(this.model.compute); // Browser will cache.
+    const { compute } = await this.promiseCompute();
     return compute(input, index, this.model.artificialDelay);
   }
   async coordinateNextLevel(input, index) { // Promise the output of another session representing this partion to be further devided
@@ -167,7 +174,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
       this.trace('leaving to coordinate child', null, index);
       await this.session?.leave();
     }
-    const { joinMillion } = await import(this.model.join),
+    const { joinMillion } = await this.promiseJoin(),
           subName = `${this.model.sessionName}-${index}`, // The reproducible "address" of the next node down in this problem.
           subOptions = this.newOptions({ // Reduce the problem a bit.
             sessionName: subName,
@@ -210,7 +217,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
       return this.model.output; // For convenience, returns output.
     }
     const start = this.trace('collect output', null),
-          { collectResults } = await import(this.model.collectResults),
+          { collectResults } = await this.promiseCollect(),
           output = await collectResults(this.model.outputs, this.model.artificialDelay);
     this.trace('collected output', start, output);
     await this.setOutput(output);
@@ -229,7 +236,7 @@ export class ComputationWorker extends Croquet.View { // Works on whatever part 
       return this.computationComplete(parentOutput);
     }
     await this.session.leave();
-    const { joinMillion } = await import(this.model.join),
+    const { joinMillion } = await this.promiseJoin(),
           parentIndex = this.indexInParent(),
           grandparent = await joinMillion(grandparentOptions, this.viewOptions);
     grandparent.view.promiseUpward(parentIndex, parentOutput);
