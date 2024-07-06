@@ -1,0 +1,5 @@
+* text=auto
+# Javascript source must match on all platforms, because the source is hashed.
+# Here we force source files to be checked out with Mac line endings, even on Windows.
+*.js text eol=lf
+*.mjs text eol=lf
