@@ -10,12 +10,10 @@
     </style>
   </head>
   <body>
-    <label>total parts: <input id="numberOfPartitions" type="number" min="2"></input></label>
-    <br/>
-    <label>fanout at each level: <input id="fanout" type="number" min="2"></input></label>
-    <br/>
-    <label style="color: grey">version counter <input style="color: grey" id="version" type="number"></input> <button  style="color: grey" onclick="version.value = parseInt(version.value)+1; version.onchange({target:version})">increment</button></label>
-    <br/>
+    <label>total parts: <input id="numberOfPartitions" type="number" min="2"></input></label> <br/>
+    <label>fanout at each level: <input id="fanout" type="number" min="2"></input></label> <br/>
+    <label>artificial delay (ms): <input id="artificialDelay" type="number" min="0", max="1000"></input></label> <br/>    
+    <label style="color: grey">version counter <input style="color: grey" id="version" type="number"></input> <button  style="color: grey" onclick="version.value = parseInt(version.value)+1; version.onchange({target:version})">increment</button></label> <br/>
     <button id="compute"></button>
     <label>answer: <span id="output">...</span></label>
     <br/>
@@ -31,14 +29,14 @@
       Croquet.App.root = false; // disable the joining overlay
       function updateComputeButton(active) {
         compute.textContent = active ? 'Compute with the above parameters' : 'Wait';
-        [compute, fanout, numberOfPartitions, version].forEach(element => element.disabled = !active);
+        [compute, fanout, numberOfPartitions, artificialDelay, version].forEach(element => element.disabled = !active);
       }
       updateComputeButton(true);
-      var computer = null;
+      var computer = null, startTime;
       class Worker extends ComputationWorker {
         async computationComplete(answer) { // Event occurs as soon as ANYONE has the answer. Even if we are still working.
           if (this.model.parentOptions) return; // Coordinator finished, but it is not the final answer.
-          output.textContent = answer;
+          if (output.textContent === "...") output.textContent = `${answer} in ${((Date.now() - startTime)/1000).toFixed(1)} seconds`;
           // leave, but don't do so within our own step().
           setTimeout(() => controller.view.parametersSet({sessionAction: 'leave'}));
         }
@@ -50,13 +48,14 @@
         async parametersSet({sessionAction = null, ...parameters}) { // Respond to player controller
           console.log(`Received command '${sessionAction}'.`);
           function update(id) { if (id in parameters) document.getElementById(id).value = parameters[id]; }
-          ['fanout', 'numberOfPartitions', 'version'].forEach(update);
+          ['fanout', 'numberOfPartitions', 'artificialDelay', 'version'].forEach(update);
 
           switch (sessionAction) {
           case 'joinAndCompute':
             updateComputeButton(false);
             output.textContent = "...";
             if (computer) return;
+            startTime = Date.now();
             let topLI = document.querySelector('body > ul > li');
             topLI.querySelector('ul').innerHTML = '';
             topLI.querySelector('name').textContent = topLI.id = parameters.sessionName;
@@ -65,7 +64,7 @@
               detachFromAncestors: false, // Easier to see what is going on.
               viewClass: Worker
             });
-            await computer.view.promiseOutput(); // and compute
+            //fixme: experiment is ongoing to let the bots do it: await computer.view.promiseOutput(); // and compute
             break;
           case 'leave':
             updateComputeButton(true);
@@ -79,7 +78,7 @@
           }
         }
       }
-      const controller = window.controller = await player('controller10', {}, ControllerView);
+      const controller = window.controller = await player('controller11', {}, ControllerView);
       console.log(`Joined ${controller.name}/${controller.id} with ${controller.model.viewCount} present.`);
       compute.onclick = () => {
         controller.view.setParameters({
@@ -95,17 +94,15 @@
         });
       }
       function current(name, ultimateDefault) { return controller.model.parameters[name] || parseInt(document.getElementById(name).value || ultimateDefault); }
-      numberOfPartitions.onchange = fanout.onchange = version.onchange = numberChanger;
+      numberOfPartitions.onchange = fanout.onchange = artificialDelay.onchange = version.onchange = numberChanger;
       if (!numberOfPartitions.value || !fanout.value) { // Set to the value everyone else or default, and get the sessionAction everyone else has.
         controller.view.setParameters({
           numberOfPartitions: current('numberOfPartitions', '4'),
           fanout: current('fanout', '4'),
+          artificialDelay: current('artificialDelay', '0'),
           version: current('version', '1'),
           prefix: "W",
-
           input: 1,
-          artificialDelay: 0, //1e3,
-
           prepareInputs: './demo-prepare.mjs',
           join: './demo-join.mjs',
           compute: './demo-compute.mjs',

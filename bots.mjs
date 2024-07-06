@@ -22,8 +22,10 @@ const PRE_JOIN_NEXT_LEVEL = true;
 const USE_CLUSTER = true;
 
 var host, isHost, makeChild;
+var fixmeReceiver;
 if (USE_CLUSTER) {
   const cluster = await import('node:cluster');
+  fixmeReceiver = cluster.default;
   host = process;
   isHost = cluster.isPrimary;
   makeChild = () => {
@@ -42,13 +44,13 @@ if (USE_CLUSTER) {
 }
   
 import { argv } from 'node:process';
-import { delay } from './utilities.mjs';
 import { player, PlayerView } from './player.mjs';
 import { joinMillion, ComputationWorker, Computation } from './demo-join.mjs';
 
 const controllerSessionName = argv[2],
       nGroups = argv[3] || 16,
-      nBotsPerGroup = argv[4] || 1;
+      nBotsPerGroup = argv[4] || 1,
+      offset = argv[5] || 0;
 
 var sessions = [], index = '-';
 function leaveSessions() { // Leave all our group's sessions (all elements of sessions array).
@@ -59,12 +61,11 @@ function leaveSessions() { // Leave all our group's sessions (all elements of se
 }
 const viewOptions = { // Options peculiar to bots. Not part of model.
   viewClass: ComputationWorker,
-  logger: './console-logger.mjs',
+  //logger: './console-logger.mjs',
   detachFromAncestors: DETACH_FROM_ANCESTORS
 };
 function joinSessions(parameters) { // Answer a list of promises for nBotsPerGroup sessions.
-  return  Array.from({length: nBotsPerGroup}, async (_, index) => {
-    await delay(index * 500);
+  return  Array.from({length: nBotsPerGroup}, (_, index) => {
     return joinMillion(parameters, viewOptions);
   });
 }
@@ -74,15 +75,19 @@ function computeSessions() { // Compute all elements of sessions array.
     if (PRE_JOIN_NEXT_LEVEL) { // TODO? - Can this be incorporated into index.mjs?
       const parentOptions = session.model.parentOptions,
             indexInParent = session.view.indexInParent();
-      await session.leave();
-      session = sessions[index] = await joinMillion(parentOptions, viewOptions);
-      session.view.setPartitionOutput(indexInParent, output);
-      session.view.promiseOutput(); // Don't wait
+      let message = {method: 'finished', parameters: {indexInParent, output}};
+      process.send?.(message) || handler(message);
+      // await session.leave();
+      // session = sessions[index] = await joinMillion(parentOptions, viewOptions);
+      // session.view.setPartitionOutput(indexInParent, output);
+      // console.log(`Reported ${indexInParent}, ${session.model.completed.reduce((sum, done) => done ? sum+1 : sum), 0}/${session.model.fanout} completed.`);
+      // session.view.promiseOutput(); // Don't wait
     }
     return output;
   });
 }
 
+var observer, observerCountdown;
 function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
   let sessionName = parameters.prefix + version,
       total = parameters.numberOfPartitions,
@@ -91,22 +96,22 @@ function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
         ...parameters,
         sessionName,
         version
-      }
+      };
+  if (!index) {
+    observer?.leave();
+    joinMillion(parentOptions, viewOptions).then(session => observer = session);
+    observerCountdown = fanout;
+  }
   return Array.from({length: nBotsPerGroup},
                     async (_, subIndex) => {
-                      await delay(100 * subIndex);
-                      const partitionIndex = (index * nBotsPerGroup + subIndex) % fanout;
+                      const partitionIndex = (index * nBotsPerGroup + subIndex + offset) % fanout;
                       return joinMillion({
                         ...parentOptions,
                         numberOfPartitions: Computation.numberAtIndex(total, Computation.partitionCapacity(total, fanout), partitionIndex),
                         sessionName: `${sessionName}-${partitionIndex}`,
                         version,
                         parentOptions
-                      }, {
-                        viewClass: ComputationWorker,
-                        logger: './console-logger.mjs',
-                        detachFromAncestors: true
-                      });
+                      }, viewOptions);
                     });
 }
 
@@ -114,6 +119,12 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
   // There are more options here than we use in any one configuration.
   //console.log(`Group ${index} received command '${method}'.`);
   switch (method) {
+  case 'finished':
+    let {indexInParent, output} = parameters;
+    console.log(`Leader learned that ${indexInParent} completed with ${output}, with ${--observerCountdown} remaining.`);
+    observer.view.setPartitionOutput(indexInParent, output);
+    if (!observerCountdown) observer.view.promiseOutput();
+    break;
   case 'index':
     index = parameters.index;
     break;
@@ -143,6 +154,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
     await Promise.all(leaveSessions());
     if (PRE_JOIN_NEXT_LEVEL) {
       sessions = await Promise.all(prejoin(parameters));
+      console.log(`Bot group ${index} is ready with ${sessions.length} sessions.`);
     }
     break;
   default:
@@ -151,23 +163,25 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
 }
 
 if (isHost) { // Host joins player session to get told what to do, which it then messages to each process/worker-thread.
-  console.log(`Usage: ${argv[1]} controllerSessionName nGroups (default: 16) nBotsPerGroup (default 1)`);
+  console.log(`Usage: ${argv[1]} controllerSessionName nGroups (default: 16) nBotsPerGroup (default 1) offset (default 0)`);
   if (controllerSessionName) console.log(`Creating ${nGroups} ${USE_CLUSTER ? "clusters" : "worker threads"} of ${nBotsPerGroup} bots each.`);
   else process.exit(1);
   class BotController extends PlayerView {
     async parametersSet({sessionAction, ...options}) {
-      for (let bot of groups) {
-        bot.post({method: sessionAction, parameters: options});
-        //await delay(1e3);
+      for (let group of groups) {
+        group.post({method: sessionAction, parameters: options});
       };
     }
   }
   const groups = Array.from({length: nGroups - 1}, makeChild),
-        controller = await player(controllerSessionName, {}, BotController);
+      controller = await player(controllerSessionName, {}, BotController);
   console.log(`Bot lead joined ${controllerSessionName}/${controller.id} with ${controller.model.viewCount} present.`);
   // Create an object for the primary process/thread, with a post method like the child process/thread have, and add to groups.
-  groups.push({post: handler});
-  groups.forEach((bot, index) => bot.post({method: 'index', parameters: {index}})); // Label each bot, for debugging.
+  groups.unshift({post: handler});
+
+  fixmeReceiver.on('message', (_, message) => handler(message));
+
+  groups.forEach((group, index) => group.post({method: 'index', parameters: {index}})); // Label each bot, for debugging.
 } else {
   host.on('message', handler);
 }
