@@ -7,12 +7,12 @@ const defaultViewOptions = {
   viewClass: ComputationWorker
 };
 
-export function joinMillion(options = {}, viewOptions = defaultViewOptions) { // Join sessionName, returning a promise for the connected session.
+export function joinMillion(options = {}, viewOptions = {}) { // Join sessionName, returning a promise for the connected session.
   return join({
     name: options.sessionName,
     model: Computation,
     view: viewOptions.viewClass,
-    viewOptions,
+    viewOptions: {...defaultViewOptions, ...viewOptions},
     options
   });
 }
