@@ -1,4 +1,5 @@
 import { Croquet, join } from './administrivia.mjs';
+export { Croquet, join };
 
 // A "Player" can be a browser or the leader of some bots.
 // Each player joins the "player" session and has a replicated model of the current parameters,
