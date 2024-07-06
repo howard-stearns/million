@@ -1,4 +1,4 @@
-import { Croquet, requestAnimationFrame, serializePromises } from './utilities.mjs';
+import { Croquet, requestAnimationFrame, serializePromises, delay } from './utilities.mjs';
 export { Croquet };
 
 export const administrivia = {
@@ -32,6 +32,10 @@ async function join1(parameters) {
 
     ...administrivia,
     ...parameters,
+  }).catch(async error => {
+    console.error(`**** got failure ${error.message} ****`);
+    await delay(100 + Math.random() * 400);
+    return Croquet.Session.join({step: stepType, ...administrivia, ...parameters});
   });
   sessions.push(session);
   if (stepType === 'manual') requestAnimationFrame(session.step);

@@ -27,6 +27,6 @@ export function log(spacing, sessionName, viewId, label, ...data) { // Called fr
   }
   activity.textContent = label;
 
-  if (label.startsWith('start co')) data.splice(1, 1);  // The model arg in this case is overkill. It's there for browser tracing.
-  console.log(spacing, sessionName, viewId, label, ...data);
+  // if (label.startsWith('start co')) data.splice(1, 1);  // The model arg in this case is overkill. It's there for browser tracing.
+  // console.log(spacing, sessionName, viewId, label, ...data);
 }

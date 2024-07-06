@@ -28,10 +28,13 @@ As a PoC, there are a number of capabilities that are deferred for further work:
 - No tooling for WebGPU or WebAssembly (other than what the browser provides).
 - No APIs defined for secrets, security, or verification.
 
-### Status
-Even as PoC, there things that need to be improved in order to fully demonstrate the concept:
+### Results
 
-- Bots! Works in my test suite, but I want to mix bots and browsers.
+Awaiting 0ms for each comutation step
+50 bots
+two tiers: 50 1st-level sessions of 50 partitions each = 2,500 partitions in 10.5 seconds
+100 bots
+two tiers: 100 1st-level sessions of 100 partitions each = 2,500 partitions in 25 seconds
 
 
 
