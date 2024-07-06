@@ -176,8 +176,6 @@ if (isHost) { // Host joins player session to get told what to do, which it then
   const groups = Array.from({length: nGroups - 1}, makeChild),
       controller = await player(controllerSessionName, {}, BotController);
   console.log(`Bot lead joined ${controllerSessionName}/${controller.id} with ${controller.model.viewCount} present.`);
-  let {persistentId, versionId} = controller;
-  console.log({persistentId, versionId, controllerSessionName});
   // Create an object for the primary process/thread, with a post method like the child process/thread have, and add to groups.
   groups.unshift({post: handler});
 
