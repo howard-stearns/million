@@ -33,8 +33,8 @@ export class PlayerModel extends Croquet.Model { // Keeps track of the model.
     this.publish(this.sessionId, Q.PARAMETERS_SET, this.parameters);
   }
 }
-//PlayerModel.register(PlayerModel.name);
-/*
+PlayerModel.register(PlayerModel.name);
+
 export class PlayerView extends Croquet.View { // Interface to the model.
   constructor(model) {
     super(model);
@@ -62,4 +62,4 @@ export function player(sessionName, initialParameters = {}, ViewClass = PlayerVi
     options: initialParameters
   });
 }
-*/
+
