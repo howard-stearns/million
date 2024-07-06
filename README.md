@@ -30,11 +30,19 @@ As a PoC, there are a number of capabilities that are deferred for further work:
 
 ### Results
 
-Awaiting 0ms for each comutation step
-50 bots
-two tiers: 50 1st-level sessions of 50 partitions each = 2,500 partitions in 10.5 seconds
-100 bots
-two tiers: 100 1st-level sessions of 100 partitions each = 2,500 partitions in 25 seconds
+One of the use cases is be able to complete, e.g., an Ethereum rollup within a block, which is 12 seconds.
+Here we simulate the rollup using 10,000 partitions.
+
+The Croquet infrastructure easily allows 100 participants per session, so we select a fanout of 100. So, we can achieve our 10k rollup with two levels or "folds": 100 partitions in the first level, of 100 partitions each.
+
+I can run 100 bots on my old Mac-Intel laptop. With these and a browser, I can do the rollup in the required time as follows:
+
+- Pre-assign one bot for each of the 100 first-level partition.
+- The operations within each fold include
+  - the preparation of the 100 inputs,
+  - each of the 100 individual "computations", and
+  - the collection of the these 100 results into a combined answer.
+  Each of these is quite trivial in this demo, and is simulated by including a Javascript "wait" of a specified time. With only the 100 bots for all 10k partitions, I can keep to the time limit with a delay between 0 and 30 ms. E.g., for 30ms, a bot operating on one fold will be 30 + (100 * 30) + 30 = 360 ms of computation. The rest of the time the overhead of the machinery and the switching between tasks on the overloaded hardware.
 
 
 
