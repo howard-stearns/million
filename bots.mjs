@@ -15,17 +15,17 @@ const DETACH_FROM_ANCESTORS = true;
 // - Compute the prejoin numberOfPartitions properly when the total is either more or less than the capacity at this level.
 // - Long term - can we support "idling" bots by moving the operating paramters outside the session options, and instead
 //   communicate them to members as the "currentOptions" (similarly to Player  -- and indeed, maybe get rid of Player)?
-const PRE_JOIN_NEXT_LEVEL = true;
+const PRE_JOIN_NEXT_LEVEL = true; // FIXME: should be ignored if there's only one level.
 
 // Controls whether we use https://nodejs.org/docs/latest/api/cluster.html or https://nodejs.org/docs/latest/api/worker_threads.html
 // for nGroups. (nBotsPerGroup run within each of the groups. Note that you can run with ./bots.mjs 1 10, or ./bots.mjs 10 1, etc.
 const USE_CLUSTER = true;
 
 var host, isHost, makeChild;
-var fixmeReceiver;
+var hostMessageReceiver;
 if (USE_CLUSTER) {
   const cluster = await import('node:cluster');
-  fixmeReceiver = cluster.default;
+  hostMessageReceiver = cluster.default;
   host = process;
   isHost = cluster.isPrimary;
   makeChild = () => {
@@ -61,7 +61,7 @@ function leaveSessions() { // Leave all our group's sessions (all elements of se
 }
 const viewOptions = { // Options peculiar to bots. Not part of model.
   viewClass: ComputationWorker,
-  //logger: './console-logger.mjs',
+  logger: './console-logger.mjs',
   detachFromAncestors: DETACH_FROM_ANCESTORS
 };
 function joinSessions(parameters) { // Answer a list of promises for nBotsPerGroup sessions.
@@ -102,8 +102,8 @@ function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
       };
   if (!index) {
     observer?.leave();
+    observerCountdown = nGroups * nBotsPerGroup;
     joinMillion(parentOptions, viewOptions).then(session => observer = session);
-    observerCountdown = fanout;
   }
   return Array.from({length: nBotsPerGroup},
                     async (_, subIndex) => {
@@ -185,7 +185,7 @@ if (isHost) { // Host joins player session to get told what to do, which it then
   // Create an object for the primary process/thread, with a post method like the child process/thread have, and add to groups.
   groups.unshift({post: handler});
 
-  fixmeReceiver.on('message', (_, message) => handler(message));
+  hostMessageReceiver.on('message', (_, message) => handler(message));
 
   groups.forEach((group, index) => group.post({method: 'index', parameters: {index}})); // Label each bot, for debugging.
 } else {
