@@ -59,8 +59,25 @@ function leaveSessions() { // Leave all our group's sessions (all elements of se
   sessions = [];
   return promises;
 }
+class  Worker extends ComputationWorker {
+  async computationComplete(output) { // Event occurs as soon as ANYONE has the answer. Even if we are still working.
+    if (!PRE_JOIN_NEXT_LEVEL || !this.model.parentOptions) return;  // If this particular view is from a prejoined subsession.
+    const indexInParent = this.indexInParent();
+    let message = {method: 'finished', parameters: {indexInParent, output}};
+    // Having everyone rejoin the root session to report their results is expensive. (About 2 seconds per join.)
+    // Here we have leaft bot 0 attached to the root as an "observer", and we report our results through that.
+    process.send?.(message) || handler(message);
+    // If we were rejoining.... Could this be done in index.mjs?
+    // The following is from when it was done in computeSessions. We'll have to make adjustments for session/index.
+    // await session.leave();
+    // session = sessions[index] = await joinMillion(session.model.parentOptions, viewOptions);
+    // session.view.setPartitionOutput(indexInParent, output);
+    // console.log(`Reported ${indexInParent}, ${session.model.completed.reduce((sum, done) => done ? sum+1 : sum), 0}/${session.model.fanout} completed.`);
+    // session.view.promiseOutput(); // Don't wait
+  }
+}
 const viewOptions = { // Options peculiar to bots. Not part of model.
-  viewClass: ComputationWorker,
+  viewClass: Worker,
   //logger: './console-logger.mjs',
   detachFromAncestors: DETACH_FROM_ANCESTORS
 };
@@ -70,23 +87,8 @@ function joinSessions(parameters) { // Answer a list of promises for nBotsPerGro
   });
 }
 function computeSessions() { // Compute all elements of sessions array.
-  return sessions.map(async (session, index) => {
-    const output = await session.view?.promiseOutput();
-    if (PRE_JOIN_NEXT_LEVEL) { // TODO? - Can this be incorporated into index.mjs?
-      const parentOptions = session.model.parentOptions,
-            indexInParent = session.view.indexInParent();
-      let message = {method: 'finished', parameters: {indexInParent, output}};
-      // Having everyone rejoin the root session to report their results is expensive. (About 2 seconds per join.)
-      // Here we have leaft bot 0 attached to the root as an "observer", and we report our results through that.
-      process.send?.(message) || handler(message);
-      // If we were rejoining....
-      // await session.leave();
-      // session = sessions[index] = await joinMillion(parentOptions, viewOptions);
-      // session.view.setPartitionOutput(indexInParent, output);
-      // console.log(`Reported ${indexInParent}, ${session.model.completed.reduce((sum, done) => done ? sum+1 : sum), 0}/${session.model.fanout} completed.`);
-      // session.view.promiseOutput(); // Don't wait
-    }
-    return output;
+  return sessions.map((session, index) => {
+    return session.view?.promiseOutput();
   });
 }
 
