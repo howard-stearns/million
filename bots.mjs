@@ -61,7 +61,7 @@ function leaveSessions() { // Leave all our group's sessions (all elements of se
 }
 class  Worker extends ComputationWorker {
   async computationComplete(output) { // Event occurs as soon as ANYONE has the answer. Even if we are still working.
-    if (!PRE_JOIN_NEXT_LEVEL || !this.model.parentOptions) return;  // If this particular view is from a prejoined subsession.
+    if (!PRE_JOIN_NEXT_LEVEL || !this.model.parentOptions || !(this.session in sessions)) return;  // If this particular view is from a prejoined 1st-level subsession.
     const indexInParent = this.indexInParent();
     let message = {method: 'finished', parameters: {indexInParent, output}};
     // Having everyone rejoin the root session to report their results is expensive. (About 2 seconds per join.)
@@ -126,6 +126,7 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
   //console.log(`Group ${index} received command '${method}'.`);
   switch (method) {
   case 'finished':
+    if (observerCountdown < 0) return; // already done
     let {indexInParent, output} = parameters;
     console.log(`Leader learned that ${indexInParent} completed in ${((Date.now() - start)/1e3).toFixed(1)} seconds, with ${--observerCountdown} remaining.`);
     observer.view.setPartitionOutput(indexInParent, output);
