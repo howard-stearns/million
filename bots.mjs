@@ -75,6 +75,16 @@ class  Worker extends ComputationWorker {
     // console.log(`Reported ${indexInParent}, ${session.model.completed.reduce((sum, done) => done ? sum+1 : sum), 0}/${session.model.fanout} completed.`);
     // session.view.promiseOutput(); // Don't wait
   }
+  nCompleted() { // For measuring progress.
+    return this.model.completed.reduce((total, done) => done ? total + 1 : total, 0);
+  }
+  percentCompleted() {
+    return this.nCompleted() / this.model.completed.length;
+  }
+  reportProgress() { // E.g.,rejoining after a failure in a partially completed session. Returns session.
+    console.log(`${this.model.sessionName} has ${this.nCompleted()} partitions completed.`);
+    return this.session;
+  }
 }
 const viewOptions = { // Options peculiar to bots. Not part of model.
   viewClass: Worker,
@@ -116,7 +126,7 @@ function prejoin({version, ...parameters}) { // See PRE_JOIN_NEXT_LEVEL
                         sessionName: `${sessionName}-${partitionIndex}`,
                         version,
                         parentOptions
-                      }, viewOptions);
+                      }, viewOptions);//.then(session => session.view.reportProgress());
                     });
 }
 
@@ -163,7 +173,11 @@ async function handler({method, parameters}) { // JSON-RPC-ish handler for commu
     if (PRE_JOIN_NEXT_LEVEL) {
       if (isHost) console.log(`Bot lead preparing bots... Please wait.`);
       sessions = await Promise.all(prejoin(parameters));
-      console.log(`Bot group ${index} is ready with ${sessions.length} sessions.`);
+      const percentCompletedInPartition = sessions.map(session => session.view.nCompleted()),
+            n = percentCompletedInPartition.length,
+            nFinished = percentCompletedInPartition.reduce((total, progress) => progress === 100 ? total + 1 : total, 0),
+            overallPercent = percentCompletedInPartition.reduce((total, progress) => total + progress, 0) / n;
+      console.log(`Bot group ${index} is ready with ${sessions.length} sessions: ${nFinished} already finished, average ${overallPercent} completed.`);
     }
     break;
   default:

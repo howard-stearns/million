@@ -4,9 +4,7 @@ This is a Proof-of-Concept of Web infrastructure for running a parallel computat
 
 The number of nodes and all aspects of the computation are pluggable, and the computation is robust against nodes connecting and disconnecting at will.
 
-It works! I've run an earlier version of this with a few hundred bots on a million partitions (3 layers with 1000 fanout), all running in the same single image, with my own *non-networked* *test-harndess* version of Croquet. With the  1 second artificial delays turned off (and no network delays), it took about 7 minutes of pure overhead.
-
-See [demo](https://howard-stearns.github.io/million/).
+It works!
 
 ### Description
 
@@ -15,8 +13,8 @@ See [demo](https://howard-stearns.github.io/million/).
   - A javascript file can be specified to [**compute a node's output from it's input**](demo-compute.mjs).
   - A javascript file can be specified to [**combine the results from an array of outputs**](demo-collect.mjs).
   - A javascript file can be specified to [**perform logging**](demo-logger.mjs).
-- As a system, the control page knows how many nodes are connected, and it automatically configures itself to provide the correct input and track the output.
-  - There could be over a million computing nodes connected, but the control page does not attempt to connect to all at once. Instead, it creates a tree network of control nodes for a partion of the problem space, recursively. Each node might end up as either a control node or computation node, under the direction of it's parent controller.
+- As a system, the control page automatically configures itself to provide the correct input and track the output.
+  - There could be over a million computing nodes connected, but the control page does not attempt to stay connected to all at once. Instead, it creates a tree network of control sessions for a partion of the problem space, recursively. Each session might further subdivide into subsessions, or it might just do the computation when the number of partitions it is responsible for is small enough.
   - Rather than relying on a million browsers to connect, a javascript file can be specified to [launch a cluster of headless workers](bots.mjs) (e.g., on a desktop or in a data center), do their work as directed.
 - The generic, resusable "infrastructure" for this is [just 250 lines of code](index.mjs): one "model" of the the computation state that is identical in each node, and one pariticipant-specific "view" that either computes a partition, or coordinates another level of partitioning (i.e., another pair of these same two classes). 
 - Note that the example page [https://howard-stearns.github.io/million/](https://howard-stearns.github.io/million/) is just a static page at githubpages. There is no application-specific "back end" for this! The app uses [Croquet](https://croquet.io/docs/croquet/) for networking, which ensures that the models stay in sync, even if the number of partipants drops to zero during computation.
@@ -30,22 +28,21 @@ As a PoC, there are a number of capabilities that are deferred for further work:
 
 ### Results
 
-One of the use cases is be able to complete, e.g., an Ethereum rollup within a block, which is 12 seconds.
-Here we simulate the rollup using 10,000 partitions.
+It works! 
 
-The Croquet infrastructure easily allows 100 participants per session, so we select a fanout of 100. So, we can achieve our 10k rollup with two levels or "folds": 100 partitions in the first level, of 100 partitions each.
+There are two target cases that have been successfully executed, based around using a browser, 100 NodeJS bots (as my Mac-Intel laptop can handle that), and a fanout of 100 (which the network can handle):
 
-I can run 100 bots on my old Mac-Intel laptop. With these and a browser, I can do the rollup in the required time as follows:
+- 1 million partitions = three levels of 100 * 100 * 100
+- 10k partitions = two levels of 100 * 100, to be completed within 12 seconds, which is the Ethereum block time. (A use case for this is to do blockchain rollups.)
 
-- Pre-assign one bot for each of the 100 first-level partition.
-- The operations within each fold include
-  - the preparation of the 100 inputs,
-  - each of the 100 individual "computations", and
-  - the collection of the these 100 results into a combined answer.
+A browser or bot can connect to the root session of the computation, to get assigned one of the 100 first-level partitions. This automatic assignment in the parent is fine when browser are connecting at random times. However, in both of my cases, I avoid flooding the root node at the beginning and end of the computation, by specifically assigning each bot to one of the first level partitions, and reporting its results to a designated "observer" bot that stays connected to the root session.
 
-Each of these is quite trivial in this demo, and is simulated by including a Javascript "wait" of a specified time. With only the 100 bots for all 10k partitions, I can reliably keep to the time limit with a delay of up to around 75 ms. E.g., a bot operating on one fold will be 75 * 102 ms > 7.5 seconds of computation. The rest of the time is network round-tripping (for each step of computation) and overhead.
+At each level, the pluggable computation takes an "artificial delay" parameter, which specifies how long to take in simulating the division into 100 partitions, in computing each of the 100 partitions in turn, and in combining the 100 results:
 
+- For the 1M partition case, I set that aritifical delay to zero, for the maxium message frequency load. There were a lot of disconnections, but because the system keeps track of its progress and subproblem results in the Croquet cloud, it is trivial to restart. The accomplishment here is that the 1M partitions were computed correctly with bots contstantly connecting, finishing or failing, and then reconnecting.
+- For the 10k Ethereum case, the artificial delay was set to 75 ms. E.g., a bot operating on one fold will take 102 * 75 ms > 7.6 seconds of computation. The rest of the time is network round-tripping (for each of the 102 steps	 of computation) and overhead (including laptop context switching between my bots).
 
+The [demo](https://howard-stearns.github.io/million/) is the actual code used, but it is specifically designed to operate these two cases. It is **not** a general-purpose self-guided exploration.
 
 
 
